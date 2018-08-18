@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#acse myprog.src myprog.asm
+#asm myprog.asm myprog.o
+#mace myprog.o
+
+if [[ $1 -eq "" ]]; then
+  echo -e "Usage:\n\t$0 <LACE_source.src>\n"
+  exit -1
+fi 
+
+echo "Exec: acse $1 ${1%.src}.asm"
+acse $1 ${1%.src}.asm
+
+echo "Exec: ${1%.src}.asm ${1%.src}.o"
+asm ${1%.src}.asm ${1%.src}.o
+
+echo "Exec: mace ${1%.src}.o"
+mace ${1%.src}.o
+
+echo "Done."
+
