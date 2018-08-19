@@ -57,7 +57,7 @@ clean: clean_acse clean_all_ex
 
 
 clean_acse:
-	rm */**/*.rej
+	rm -f */**/*.rej
 	git ck -- ${ACSE_DIR}
 	@echo Acse dir restored
 	@echo
