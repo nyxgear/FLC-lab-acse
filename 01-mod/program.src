@@ -1,0 +1,3 @@
+int a;
+read(a);
+write (a % 5); // it prints the remainder of the division by 5
