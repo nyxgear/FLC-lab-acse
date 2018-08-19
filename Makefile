@@ -1,5 +1,4 @@
 # Acse version: acse_1.1.2
-
 .PHONY : all clean patch_compile_execute patch_apply patch_create_new \
 compile_compiler compile_program execute_program restore_acse clean_all_ex \
 check_arg_ex
@@ -18,15 +17,23 @@ patch_compile_execute: patch_apply all
 
 
 patch_apply: check_arg_ex
-	patch --no-backup-if-mismatch -Np1 -d ${ACSE_DIR} -i ../${ex}/${ex}.patch
-	@echo Patch applied
-	@echo
+	# Test if dir is [0-9]{2}-prof-.*
+
+	@if [ "$(wordlist 2,2,$(subst -, ,${ex}))" = prof ]; then \
+		# Apply a professor patch
+		patch --no-backup-if-mismatch -Np1 -d ${ACSE_DIR} -i ../${ex}/${ex}.patch; \
+    else \
+		# Apply a regular patch
+		patch --no-backup-if-mismatch -Np1 -i ${ex}/${ex}.patch; \
+    fi
 
 
 .ONESHELL:
 patch_create_new: check_arg_ex
 	mkdir -p ${ex}
 	git diff > ${ex}/${ex}.patch
+	@echo Created new patch ${ex}
+	@echo
 
 compile_compiler:
 	$(MAKE) -C ${ACSE_DIR}
