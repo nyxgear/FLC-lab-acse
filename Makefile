@@ -12,20 +12,17 @@ endif
 # by default compile compiler, compile program and execute it
 all: compile_compiler compile_program execute_program
 
-# apply the exercise patch before the the default
-patch_compile_execute: patch_apply all
-
 
 patch_apply: check_arg_ex
 	# Test if dir is [0-9]{2}-prof-.*
-
+	
 	@if [ "$(wordlist 2,2,$(subst -, ,${ex}))" = prof ]; then \
 		# Apply a professor patch
 		patch --no-backup-if-mismatch -Np1 -d ${ACSE_DIR} -i ../${ex}/${ex}.patch; \
-    else \
+	else \
 		# Apply a regular patch
 		patch --no-backup-if-mismatch -Np1 -i ${ex}/${ex}.patch; \
-    fi
+	fi
 
 
 .ONESHELL:

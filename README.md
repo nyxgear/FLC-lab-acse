@@ -5,7 +5,6 @@ This repo stores the [ACSE suite] and the solved exercises based on it.
 
 - [Make commands](#make-commands)
 	- [Compile compiler, compile program and run it](#compile-compiler-compile-program-and-run-it)
-	- [Apply patch, compile compiler, compile program and execute it](#apply-patch-compile-compiler-compile-program-and-execute-it)
 	- [Patch apply existing](#patch-apply-existing)
 	- [Patch create new](#patch-create-new)
 	- [Compile compiler](#compile-compiler)
@@ -27,14 +26,6 @@ This repo stores the [ACSE suite] and the solved exercises based on it.
 $ make ex=<exercise-dir>
 
 # all: compile_compiler compile_program execute_program
-```
-
-### Apply patch, compile compiler, compile program and execute it
-
-```bash
-$ make patch_compile_execute ex=<exercise-dir>
-
-# patch_compile_execute: patch_apply all
 ```
 
 ### Patch apply existing
