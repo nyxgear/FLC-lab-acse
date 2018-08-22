@@ -1,0 +1,25 @@
+In the following we assume that:
+*   ${PATCH_DIR} is the directory containing patch files
+*   ${ACSE_DIR} is the directory of the ACSE toolchain (the directory that 
+    contains the 'acse', 'assembler', 'mace' directories)
+
+To apply a patch file:
+
+  cd ${ACSE_DIR}
+  patch -Np1 -i ${PATCH_DIR}/file.patch
+
+  
+To compile the compiler:
+
+  make -C ${ACSE_DIR}
+
+Given a source file 'program.src', to compile it through ACSE:
+
+  ${ACSE_DIR}/bin/acse program.src   # if successful it produces 'output.cfg', 'output.asm'
+  ${ACSE_DIR}/bin/asm output.asm     # if successful it produces 'output.o'
+  ${ACSE_DIR}/bin/mace output.o      # it executes the compiled program
+  
+To check that the generated code reflects what you expect, you can verify the 
+content of 'output.cfg' file: it contains the code just after the codegen phase
+of the compiler, where each scalar variable has a unique register associated 
+and where implicit memory operations have not been added yet.
