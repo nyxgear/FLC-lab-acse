@@ -8,7 +8,7 @@ To apply a patch file:
   cd ${ACSE_DIR}
   patch -Np1 -i ${PATCH_DIR}/file.patch
 
-  
+
 To compile the compiler:
 
   make -C ${ACSE_DIR}
@@ -23,3 +23,35 @@ To check that the generated code reflects what you expect, you can verify the
 content of 'output.cfg' file: it contains the code just after the codegen phase
 of the compiler, where each scalar variable has a unique register associated 
 and where implicit memory operations have not been added yet.
+
+
+----------------------------------------------------------
+Patch, compile compliler, compile program and test it
+
+1. Apply a patch:
+patch --no-backup-if-mismatch -Np1 -i patches/03\ -\ var\ declarations/01-define-simple.patch
+
+2. Compile compiler:
+make
+
+3. Run the test (by applying a patch test/Makefile should have been edited)
+make test
+
+
+----------------------------------------------------------
+Create a new patch file
+mkdir -p patches/new_patch
+git diff > patches/new_patch/patch-name.patch
+
+
+----------------------------------------------------------
+Commit new patch file and restore the git repository status
+
+1. Save only the patch file with a commit (do not inlcude changes already into the patch)
+git add patches/new_patch/patch-name.patch
+git commit -m 'new patch'
+
+3. Restore repository status
+git ck .
+
+
