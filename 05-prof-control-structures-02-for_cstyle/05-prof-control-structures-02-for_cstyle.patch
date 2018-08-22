@@ -1,0 +1,176 @@
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 7029c8b..3fa2783 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -106,6 +106,8 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
++   t_for_statement for_stmt;
++   t_axe_expression_opt expr_opt;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -118,7 +120,6 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ %token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ
+ %token ANDAND OROR
+ %token COMMA
+-%token FOR
+ %token RETURN
+ %token READ
+ %token WRITE
+@@ -130,11 +131,13 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ %token <intval> TYPE
+ %token <svalue> IDENTIFIER
+ %token <intval> NUMBER
++%token <for_stmt> FOR
+ 
+ %type <expr> exp
+ %type <decl> declaration
+ %type <list> declaration_list
+ %type <label> if_stmt
++%type <expr_opt> exp_opt
+ 
+ /*=========================================================================
+                           OPERATOR PRECEDENCES
+@@ -251,6 +254,7 @@ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
+             | return_statement SEMI      { /* does nothing */ }
++            | for_statement              { /* does nothing */ }
+ ;
+ 
+ read_write_statement : read_statement  { /* does nothing */ }
+@@ -415,6 +419,60 @@ return_statement : RETURN
+             }
+ ;
+ 
++assign_expr : IDENTIFIER ASSIGN exp
++              {
++                int vreg = get_symbol_location(program, $1, 0);
++                if ($3.expression_type == IMMEDIATE)
++                  gen_addi_instruction(program, vreg, REG_0, $3.value);
++                else
++                  gen_add_instruction(program, vreg, REG_0, $3.value,
++                                      CG_DIRECT_ALL);
++              }
++            ;
++
++assign_list : assign_expr COMMA assign_list
++            | assign_expr
++            ;
++
++assign_list_opt : assign_list
++                | 
++                ;
++
++exp_opt : exp { $$.expr = $1; $$.empty = 0; }
++        | { $$.empty = 1; }
++        ;
++
++for_statement : FOR LPAR assign_list_opt SEMI
++                {
++                  $1.label_condition = assignNewLabel(program);
++                }
++                exp_opt SEMI
++                {
++                  $1.label_body = newLabel(program);
++                  $1.label_end = newLabel(program);
++                  if (!$6.empty) {
++                    if ($6.expr.expression_type == IMMEDIATE)
++                      gen_load_immediate(program, $6.expr.value);
++                    else
++                      gen_andb_instruction(program, $6.expr.value, $6.expr.value,
++                                           $6.expr.value, CG_DIRECT_ALL);
++                    gen_beq_instruction(program, $1.label_end, 0);
++                  }
++                  gen_bt_instruction(program, $1.label_body, 0);
++                  $1.label_update = assignNewLabel(program);
++                }
++                assign_list_opt RPAR
++                {
++                  gen_bt_instruction(program, $1.label_condition, 0);
++                  assignLabel(program, $1.label_body);
++                }
++                code_block
++                {
++                  gen_bt_instruction(program, $1.label_update, 0);
++                  assignLabel(program, $1.label_end);
++                }
++              ;
++
+ read_statement : READ LPAR IDENTIFIER RPAR 
+             {
+                int location;
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index f2fce55..380b2fd 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,20 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_for_statement
++{
++   t_axe_label *label_condition;
++   t_axe_label *label_body;
++   t_axe_label *label_update;
++   t_axe_label *label_end;
++} t_for_statement;
++
++typedef struct t_axe_expression_opt
++{
++   t_axe_expression expr;
++   int empty;
++} t_axe_expression_opt;
++
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..34d0eb6 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,8 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc \
++      for
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/for/for1.src b/tests/for/for1.src
+index e69de29..4b850ce 100644
+--- a/tests/for/for1.src
++++ b/tests/for/for1.src
+@@ -0,0 +1,10 @@
++int a;
++int b;
++int i;
++
++read(a);
++read(b);
++
++for (i = a; i < b; i = i + 1) {
++	write(i);
++}
+diff --git a/tests/for/for2.src b/tests/for/for2.src
+index e69de29..b7bb926 100644
+--- a/tests/for/for2.src
++++ b/tests/for/for2.src
+@@ -0,0 +1,13 @@
++int a;
++int b;
++int i;
++
++read(a);
++read(b);
++
++i = a;
++
++for (; i < b;) {
++	write(i);
++	i = i + 1;
++}

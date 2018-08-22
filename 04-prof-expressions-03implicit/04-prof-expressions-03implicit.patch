@@ -1,0 +1,88 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index f4ad42a..9baf229 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -98,6 +98,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"$implicit"       { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 7029c8b..d1ca012 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -164,7 +164,18 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+       2. A list of instructions. (at least one instruction!).
+  * When the rule associated with the non-terminal `program' is executed,
+  * the parser notify it to the `program' singleton instance. */
+-program  : var_declarations statements
++program  :
++         {
++            t_axe_declaration *d =
++              alloc_declaration(strdup("$implicit"), 0, 0, 0);
++
++            if (!d) notifyError(AXE_OUT_OF_MEMORY);
++
++            t_list *l = addFirst(NULL, d);
++            
++            set_new_variables(program, INTEGER_TYPE, l);
++         }
++         var_declarations statements
+          {
+             /* Notify the end of the program. Once called
+              * the function `set_end_Program' - if necessary -
+@@ -245,6 +256,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
+             | SEMI            { gen_nop_instruction(program); }
++            | exp_statement SEMI         { /* does nothing */ }
+ ;
+ 
+ control_statement : if_statement         { /* does nothing */ }
+@@ -454,6 +466,17 @@ write_statement : WRITE LPAR exp RPAR
+             }
+ ;
+ 
++exp_statement : exp
++                {
++                  int vreg = get_symbol_location(program, "$implicit", 0);
++
++                  if ($1.expression_type == IMMEDIATE)
++                    gen_addi_instruction(program, vreg, REG_0, $1.value);
++                  else
++                    gen_add_instruction(program, vreg, REG_0,
++                                        $1.value, CG_DIRECT_ALL);
++                }
++
+ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    | IDENTIFIER  {
+                      int location;
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..551ab06 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,8 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc \
++      implicit
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/implicit/imp1.src b/tests/implicit/imp1.src
+index e69de29..74a6106 100644
+--- a/tests/implicit/imp1.src
++++ b/tests/implicit/imp1.src
+@@ -0,0 +1,7 @@
++int a;
++
++read(a);
++
++a + 5;
++
++write($implicit);

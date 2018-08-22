@@ -1,0 +1,275 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index f4ad42a..2672b55 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -98,6 +98,11 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"forall"          { return FORALL; }
++"to"              { return TO; }
++"downto"          { return DOWNTO; }
++"break"           { return BREAK; }
++"continue"        { return CONTINUE; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 7029c8b..240a7be 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -90,6 +90,8 @@ t_reg_allocator *RA;       /* Register allocator. It implements the "Linear scan
+ 
+ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ 
++t_list *forall_loop_nest = NULL;
++
+ %}
+ 
+ %expect 1
+@@ -106,6 +108,7 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
++   t_forall_statement forall_stmt;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -122,6 +125,8 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ %token RETURN
+ %token READ
+ %token WRITE
++%token TO DOWNTO
++%token BREAK CONTINUE
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -130,11 +135,13 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ %token <intval> TYPE
+ %token <svalue> IDENTIFIER
+ %token <intval> NUMBER
++%token <forall_stmt> FORALL
+ 
+ %type <expr> exp
+ %type <decl> declaration
+ %type <list> declaration_list
+ %type <label> if_stmt
++%type <intval> forall_evolution
+ 
+ /*=========================================================================
+                           OPERATOR PRECEDENCES
+@@ -251,6 +258,9 @@ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
+             | return_statement SEMI      { /* does nothing */ }
++            | forall_statement           { /* does nothing */ }
++            | break_statement SEMI       { /* does nothing */ }
++            | continue_statement SEMI    { /* does nothing */ }
+ ;
+ 
+ read_write_statement : read_statement  { /* does nothing */ }
+@@ -415,6 +425,78 @@ return_statement : RETURN
+             }
+ ;
+ 
++forall_evolution : TO { $$ = 0; }
++                 | DOWNTO { $$ = 1; }
++                 ;
++
++forall_statement : FORALL LPAR IDENTIFIER ASSIGN exp forall_evolution
++                   {
++                     t_axe_variable *var = getVariable(program, $3);
++                     if (var->isArray)
++                       notifyError(AXE_INVALID_VARIABLE);
++
++                     int vreg = get_symbol_location(program, $3, 0);
++                     if ($5.expression_type == IMMEDIATE)
++                       gen_addi_instruction(program, vreg, REG_0, $5.value);
++                     else
++                       gen_add_instruction(program, vreg, REG_0, $5.value,
++                                           CG_DIRECT_ALL);
++
++                     $1.label_condition = assignNewLabel(program);
++                   }
++                   exp RPAR
++                   {
++                     int vreg = get_symbol_location(program, $3, 0);
++                     t_axe_expression iv = create_expression(vreg, REGISTER);
++                     t_axe_expression cmp =
++                       handle_binary_comparison(program, iv, $8, _NOTEQ_);
++
++                     if (cmp.expression_type == IMMEDIATE)
++                       gen_load_immediate(program, cmp.value);
++                     else
++                       gen_andb_instruction(program, cmp.value, cmp.value,
++                                            cmp.value, CG_DIRECT_ALL);
++                     $1.label_end = newLabel(program);
++                     gen_beq_instruction(program, $1.label_end, 0);
++                     $1.label_iv_update = newLabel(program);
++
++                     forall_loop_nest = addFirst(forall_loop_nest, &$1);
++                   }
++                   code_block
++                   {
++                     assignLabel(program, $1.label_iv_update);
++                     int vreg = get_symbol_location(program, $3, 0);
++                     if ($6 == 0)
++                       gen_addi_instruction(program, vreg, vreg, 1);
++                     else
++                       gen_subi_instruction(program, vreg, vreg, 1);
++                     gen_bt_instruction(program, $1.label_condition, 0);
++                     assignLabel(program, $1.label_end);
++
++                     forall_loop_nest = removeFirst(forall_loop_nest);
++                   }
++                 ;
++
++break_statement : BREAK
++                  {
++                    if (!forall_loop_nest)
++                      notifyError(AXE_UNKNOWN_ERROR);
++                    t_forall_statement *f =
++                      (t_forall_statement*)LDATA(forall_loop_nest);
++                    gen_bt_instruction(program, f->label_end, 0);
++                  }
++                ;
++
++continue_statement : CONTINUE
++                     {
++                       if (!forall_loop_nest)
++                         notifyError(AXE_UNKNOWN_ERROR);
++                       t_forall_statement *f =
++                         (t_forall_statement*)LDATA(forall_loop_nest);
++                       gen_bt_instruction(program, f->label_iv_update, 0);
++                     }
++                   ;
++
+ read_statement : READ LPAR IDENTIFIER RPAR 
+             {
+                int location;
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index f2fce55..c2aafa6 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,13 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_forall_statement
++{
++   t_axe_label *label_condition;
++   t_axe_label *label_iv_update;
++   t_axe_label *label_end;
++} t_forall_statement;
++
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..a55ec42 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,8 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc \
++      forall
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/forall/downto.src b/tests/forall/downto.src
+index e69de29..f4e4769 100644
+--- a/tests/forall/downto.src
++++ b/tests/forall/downto.src
+@@ -0,0 +1,10 @@
++int a;
++int b;
++int i;
++
++read(a);
++read(b);
++
++forall (i = a + 1 downto b-1) {
++	write(2 * i);
++}
+diff --git a/tests/forall/downto_break.src b/tests/forall/downto_break.src
+index e69de29..ad992d8 100644
+--- a/tests/forall/downto_break.src
++++ b/tests/forall/downto_break.src
+@@ -0,0 +1,11 @@
++int a;
++int b;
++int i;
++
++read(a);
++read(b);
++
++forall (i = a + 1 downto b-1) {
++	if (i == 5) break;
++	write(2 * i);
++}
+diff --git a/tests/forall/downto_continue.src b/tests/forall/downto_continue.src
+index e69de29..a8b248a 100644
+--- a/tests/forall/downto_continue.src
++++ b/tests/forall/downto_continue.src
+@@ -0,0 +1,11 @@
++int a;
++int b;
++int i;
++
++read(a);
++read(b);
++
++forall (i = a + 1 downto b-1) {
++	if (i == 5) continue;
++	write(2 * i);
++}
+diff --git a/tests/forall/to.src b/tests/forall/to.src
+index e69de29..e895471 100644
+--- a/tests/forall/to.src
++++ b/tests/forall/to.src
+@@ -0,0 +1,10 @@
++int a;
++int b;
++int i;
++
++read(a);
++read(b);
++
++forall (i = a + 1 to b-1) {
++	write(2 * i);
++}
+diff --git a/tests/forall/to_break.src b/tests/forall/to_break.src
+index e69de29..9f6d746 100644
+--- a/tests/forall/to_break.src
++++ b/tests/forall/to_break.src
+@@ -0,0 +1,11 @@
++int a;
++int b;
++int i;
++
++read(a);
++read(b);
++
++forall (i = a + 1 to b-1) {
++	if (i == 5) break;
++	write(2 * i);
++}
+diff --git a/tests/forall/to_continue.src b/tests/forall/to_continue.src
+index e69de29..7a1f2f6 100644
+--- a/tests/forall/to_continue.src
++++ b/tests/forall/to_continue.src
+@@ -0,0 +1,11 @@
++int a;
++int b;
++int i;
++
++read(a);
++read(b);
++
++forall (i = a + 1 to b-1) {
++	if (i == 5) continue;
++	write(2 * i);
++}

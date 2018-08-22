@@ -1,0 +1,191 @@
+diff -uNr acse_1.1.0/acse/Acse.lex acse_1.1.0-define/acse/Acse.lex
+--- acse_1.1.0/acse/Acse.lex	2008-11-21 12:47:02.000000000 +0100
++++ acse_1.1.0-define/acse/Acse.lex	2013-12-10 15:20:03.654835124 +0100
+@@ -16,6 +16,7 @@
+  */
+ 
+ #include <string.h>
++#include "axe_engine.h"
+ #include "axe_struct.h"
+ #include "collections.h"
+ #include "Acse.tab.h"
+@@ -24,6 +25,7 @@
+ /* Variables declared in the lexer for error tracking */
+ extern int line_num;
+ extern int num_error;
++extern t_program_infos *program;
+ 
+ /* extern declaration of function yyerror */
+ extern int yyerror(const char* errmsg);
+@@ -98,8 +100,17 @@
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"define"          { return DEFINE; }
+ 
+-{ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
++{ID}              {
++                    int value;
++                    if (isDefine(program, yytext, &value)) {
++                      yylval.intval = value;
++                      return NUMBER;
++                    }
++                    yylval.svalue=strdup(yytext);
++                    return IDENTIFIER;
++                  }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+                     return(NUMBER); }
+ 
+diff -uNr acse_1.1.0/acse/Acse.y acse_1.1.0-define/acse/Acse.y
+--- acse_1.1.0/acse/Acse.y	2008-12-23 17:02:28.000000000 +0100
++++ acse_1.1.0-define/acse/Acse.y	2013-12-10 09:27:05.447843186 +0100
+@@ -74,6 +74,7 @@
+                         * a control flow graph. More informations can be found
+                         * analyzing the file `axe_cflow_graph.h'. */
+                      
++
+ /* program informations */
+ t_program_infos *program;  /* The singleton instance of `program'.
+                             * An instance of `t_program_infos' holds in its
+@@ -122,6 +123,7 @@
+ %token RETURN
+ %token READ
+ %token WRITE
++%token DEFINE
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -164,7 +166,7 @@
+       2. A list of instructions. (at least one instruction!).
+  * When the rule associated with the non-terminal `program' is executed,
+  * the parser notify it to the `program' singleton instance. */
+-program  : var_declarations statements
++program  : define_declarations var_declarations statements
+          {
+             /* Notify the end of the program. Once called
+              * the function `set_end_Program' - if necessary -
+@@ -177,6 +179,17 @@
+          }
+ ;
+ 
++define_declarations : define_declarations define_declaration
++                    |
++                    ;
++
++define_declaration : DEFINE IDENTIFIER NUMBER SEMI
++                     {
++                        addDefine(program, $2, $3);
++                        free($2);
++                     }
++                   ;
++
+ var_declarations : var_declarations var_declaration   { /* does nothing */ }
+                  | /* empty */                        { /* does nothing */ }
+ ;
+diff -uNr acse_1.1.0/acse/axe_constants.h acse_1.1.0-define/acse/axe_constants.h
+--- acse_1.1.0/acse/axe_constants.h	2008-11-21 12:47:02.000000000 +0100
++++ acse_1.1.0-define/acse/axe_constants.h	2013-12-10 09:24:42.868615604 +0100
+@@ -123,6 +123,7 @@
+ #define AXE_TRANSFORM_ERROR 27
+ #define AXE_SYNTAX_ERROR 28
+ #define AXE_UNKNOWN_ERROR 29
++#define AXE_ALREADY_DEFINED 30
+ 
+ /* DIRECTIVE TYPES */
+ #define DIR_WORD 0
+diff -uNr acse_1.1.0/acse/axe_engine.c acse_1.1.0-define/acse/axe_engine.c
+--- acse_1.1.0/acse/axe_engine.c	2008-12-15 17:44:34.000000000 +0100
++++ acse_1.1.0-define/acse/axe_engine.c	2013-12-10 09:31:19.903131351 +0100
+@@ -475,6 +475,7 @@
+       notifyError(AXE_OUT_OF_MEMORY);
+ 
+    /* initialize the new instance of `result' */
++   result->defines = NULL;
+    result->variables = NULL;
+    result->instructions = NULL;
+    result->data = NULL;
+@@ -902,3 +903,31 @@
+    /* free the list of variables */
+    freeList(variables);
+ }
++
++typedef struct define_t {
++  char *name;
++  int value;
++} define_t;
++
++void addDefine(t_program_infos *program, const char *name, int value) {
++  if (isDefine(program, name, NULL))
++    notifyError(AXE_ALREADY_DEFINED);
++
++  define_t *def = malloc(sizeof(define_t));
++  def->name = strdup(name);
++  def->value = value;
++
++  program->defines = addFirst(program->defines, def);
++}
++
++int isDefine(t_program_infos *program, const char *name, int *value) {
++  t_list *el;
++  for (el = program->defines; el; el = LNEXT(el)) {
++    define_t *def = (define_t*)LDATA(el);
++    if (strcmp(def->name, name) == 0) {
++      if (value) *value = def->value;
++      return 1;
++    }
++  }
++  return 0;
++}
+diff -uNr acse_1.1.0/acse/axe_engine.h acse_1.1.0-define/acse/axe_engine.h
+--- acse_1.1.0/acse/axe_engine.h	2008-12-15 17:44:34.000000000 +0100
++++ acse_1.1.0-define/acse/axe_engine.h	2013-12-10 09:31:02.866556978 +0100
+@@ -17,6 +17,7 @@
+ 
+ typedef struct t_program_infos
+ {
++  t_list *defines;
+   t_list *variables;
+   t_list *instructions;
+   t_list *data;
+@@ -71,4 +72,8 @@
+ /* write the corresponding assembly for the given program */
+ extern void writeAssembly(t_program_infos *program, char *output_file);
+ 
++extern void addDefine(t_program_infos *program, const char *name, int value);
++
++extern int isDefine(t_program_infos *program, const char *name, int *value);
++
+ #endif
+diff -uNr acse_1.1.0/acse/axe_errors.c acse_1.1.0-define/acse/axe_errors.c
+--- acse_1.1.0/acse/axe_errors.c	2008-11-21 12:47:02.000000000 +0100
++++ acse_1.1.0-define/acse/axe_errors.c	2013-12-10 09:30:36.143368417 +0100
+@@ -101,6 +101,7 @@
+       case AXE_SYNTAX_ERROR : msg = "error: "
+                   "Syntax error found"; break;
+       case AXE_UNKNOWN_ERROR : msg = "error: Unknown error"; break;
++      case AXE_ALREADY_DEFINED : msg = "error: Define already exists"; break;
+       default : msg = "<invalid errorcode>"; break;
+    }
+    
+diff -uNr acse_1.1.0/tests/define/define.src acse_1.1.0-define/tests/define/define.src
+--- acse_1.1.0/tests/define/define.src	1970-01-01 01:00:00.000000000 +0100
++++ acse_1.1.0-define/tests/define/define.src	2013-12-10 15:19:07.398473224 +0100
+@@ -0,0 +1,6 @@
++define FOO 42
++define BAR 56
++
++int a;
++read(a);
++write(a * FOO - BAR);
+diff -uNr acse_1.1.0/tests/Makefile acse_1.1.0-define/tests/Makefile
+--- acse_1.1.0/tests/Makefile	2008-12-14 01:05:42.000000000 +0100
++++ acse_1.1.0-define/tests/Makefile	2013-12-10 15:19:07.401806540 +0100
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc define
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
