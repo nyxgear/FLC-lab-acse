@@ -1,0 +1,112 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index f4ad42a..3764bf7 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -81,6 +81,8 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ ">"               { return GT; }
+ "<<"              { return SHL_OP; }
+ ">>"              { return SHR_OP; }
++"<<<"             { return ROL_OP; }
++">>>"             { return ROR_OP; }
+ "=="              { return EQ; }
+ "!="              { return NOTEQ; }
+ "<="              { return LTEQ; }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 7029c8b..05ade2d 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -116,7 +116,7 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ %token SEMI COLON PLUS MINUS MUL_OP DIV_OP MOD_OP
+ %token AND_OP OR_OP NOT_OP
+ %token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ
+-%token ANDAND OROR
++%token ANDAND OROR ROL_OP ROR_OP
+ %token COMMA
+ %token FOR
+ %token RETURN
+@@ -148,7 +148,7 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ %left AND_OP
+ %left EQ NOTEQ
+ %left LT GT LTEQ GTEQ
+-%left SHL_OP SHR_OP
++%left SHL_OP SHR_OP ROL_OP ROR_OP
+ %left MINUS PLUS
+ %left MUL_OP DIV_OP
+ %right NOT
+@@ -546,6 +546,8 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    }
+    | exp SHL_OP exp  {  $$ = handle_bin_numeric_op(program, $1, $3, SHL); }
+    | exp SHR_OP exp  {  $$ = handle_bin_numeric_op(program, $1, $3, SHR); }
++   | exp ROL_OP exp  {  $$ = handle_rotate(program, $1, $3, 1); }
++   | exp ROR_OP exp  {  $$ = handle_rotate(program, $1, $3, 0); }
+    | exp ANDAND exp  {  $$ = handle_bin_numeric_op(program, $1, $3, ANDL); }
+    | exp OROR exp    {  $$ = handle_bin_numeric_op(program, $1, $3, ORL); }
+    | LPAR exp RPAR   { $$ = $2; }
+diff --git a/acse/axe_expressions.c b/acse/axe_expressions.c
+index 9fa685e..733a895 100644
+--- a/acse/axe_expressions.c
++++ b/acse/axe_expressions.c
+@@ -276,3 +276,36 @@ t_axe_expression handle_binary_comparison (t_program_infos *program
+    /* return the new expression */
+    return create_expression (output_register, REGISTER);
+ }
++
++
++t_axe_expression handle_rotate(t_program_infos *program, t_axe_expression exp1,
++                               t_axe_expression exp2, int left) {
++  t_axe_expression one = create_expression(1, IMMEDIATE);
++  t_axe_expression size = create_expression(32, IMMEDIATE);
++
++  t_axe_expression shamt_lo = left ? handle_bin_numeric_op(program, size, 
++                                                           exp2, SUB)
++                                   : exp2;
++  t_axe_expression shamt_hi = left ? exp2
++                                   : handle_bin_numeric_op(program, size,
++                                                           exp2, SUB);
++
++  t_axe_expression mask_lo =
++    handle_bin_numeric_op(program,
++                          handle_bin_numeric_op(program, one, shamt_lo, SHL),
++                          one, SUB);
++  t_axe_expression mask_hi =
++    handle_bin_numeric_op(program,
++                          handle_bin_numeric_op(program, one, shamt_hi, SHL),
++                          one, SUB);
++
++  t_axe_expression lo = handle_bin_numeric_op(program, exp1, mask_lo, ANDB);
++  t_axe_expression hi = handle_bin_numeric_op(program, exp1, shamt_lo, SHR);
++
++  return handle_bin_numeric_op(program, 
++                               handle_bin_numeric_op(program, hi, 
++                                                     mask_hi, ANDB),
++                               handle_bin_numeric_op(program, lo,
++                                                     shamt_hi, SHL),
++                               ORB);
++}
+diff --git a/acse/axe_expressions.h b/acse/axe_expressions.h
+index 97a91b3..ac7f263 100644
+--- a/acse/axe_expressions.h
++++ b/acse/axe_expressions.h
+@@ -50,4 +50,9 @@ extern t_axe_expression handle_bin_numeric_op (t_program_infos *program
+ extern t_axe_expression handle_binary_comparison (t_program_infos *program
+          , t_axe_expression exp1, t_axe_expression exp2, int condition);
+ 
++
++extern t_axe_expression handle_rotate(t_program_infos *program,
++                                      t_axe_expression exp1,
++                                      t_axe_expression exp2,
++                                      int left);
+ #endif
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..f659b84 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc rotate
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
