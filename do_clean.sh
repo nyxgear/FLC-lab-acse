@@ -1,12 +1,12 @@
 #!/bin/bash
 
-echo -e '\ngit reset .'
+echo -e '------> git reset .'
 git reset .
 
-echo -e '\ngit checkout .'
+echo -e '------> git checkout .'
 git checkout .
 
-echo -e '\ngit clean -fd'
+echo -e '------> git clean -fd'
 git clean -fd
 
 echo -e '\nDone.'

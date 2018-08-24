@@ -1,10 +1,16 @@
 #!/bin/bash
 
-echo -e '\ngit add .'
+echo -e '------> git add .'
 git add .
 
-echo -e '\ngit stash'
-git stash
+
+if [ -z "$1" ]; then
+	echo -e '------> git stash'
+	git stash
+else
+	echo -e "------> git stash save ""$1"
+	git stash save "$1"
+fi
 
 echo -e '\nDone.'
 
