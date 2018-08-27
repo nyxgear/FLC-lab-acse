@@ -11,10 +11,18 @@ index 663b2db..38e581f 100644
  {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
  {DIGIT}+          { yylval.intval = atoi( yytext );
 diff --git a/acse/Acse.y b/acse/Acse.y
-index ec9ef8b..ec342d0 100644
+index ec9ef8b..d28c602 100644
 --- a/acse/Acse.y
 +++ b/acse/Acse.y
-@@ -108,7 +108,8 @@ extern int yyerror(const char* errmsg);
+@@ -93,6 +93,7 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
++int already_aliased = NULL;
+ %}
+ %expect 1
+ 
+@@ -108,7 +109,8 @@ extern int yyerror(const char* errmsg);
     t_list *list;
     t_axe_label *label;
     t_while_statement while_stmt;
@@ -24,7 +32,7 @@ index ec9ef8b..ec342d0 100644
  /*=========================================================================
                                 TOKENS 
  =========================================================================*/
-@@ -125,6 +126,7 @@ extern int yyerror(const char* errmsg);
+@@ -125,6 +127,7 @@ extern int yyerror(const char* errmsg);
  %token READ
  %token WRITE
  
@@ -32,7 +40,7 @@ index ec9ef8b..ec342d0 100644
  %token <label> DO
  %token <while_stmt> WHILE
  %token <label> IF
-@@ -247,6 +249,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+@@ -247,6 +250,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
              | control_statement          { /* does nothing */ }
              | read_write_statement SEMI  { /* does nothing */ }
              | SEMI            { gen_nop_instruction(program); }
@@ -40,12 +48,18 @@ index ec9ef8b..ec342d0 100644
  ;
  
  control_statement : if_statement         { /* does nothing */ }
-@@ -418,6 +421,31 @@ return_statement : RETURN
+@@ -418,6 +422,39 @@ return_statement : RETURN
              }
  ;
  
 +alias_statement: ALIAS IDENTIFIER IDENTIFIER
 +                {
++                    if (already_aliased != NULL) {
++                        puts("Nested alias construct not allowed\n");
++                        exit(-1);
++                    }
++                    already_aliased = 1;
++
 +                    /* Save location of the first */
 +                    int error = 0;
 +                    $1.previous_location = getLocation(program->sy_table,
@@ -63,6 +77,8 @@ index ec9ef8b..ec342d0 100644
 +                {
 +                    /* Restore location of the first */
 +                    setLocation(program->sy_table, $2, $1.previous_location);
++
++                    already_aliased = NULL;
 +
 +                    free($2);
 +                    free($3);
@@ -88,7 +104,6 @@ index 47663cc..0c4d4ac 100644
 +
  /* create a label */
  extern t_axe_label * alloc_label(int value);
- 
 diff --git a/tests/Makefile b/tests/Makefile
 index a3aed3b..bf3affa 100644
 --- a/tests/Makefile
