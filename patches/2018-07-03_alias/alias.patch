@@ -11,28 +11,27 @@ index 663b2db..38e581f 100644
  {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
  {DIGIT}+          { yylval.intval = atoi( yytext );
 diff --git a/acse/Acse.y b/acse/Acse.y
-index ec9ef8b..d28c602 100644
+index ec9ef8b..223ab98 100644
 --- a/acse/Acse.y
 +++ b/acse/Acse.y
-@@ -93,6 +93,7 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+@@ -93,6 +93,8 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
  extern int yylex(void);
  extern int yyerror(const char* errmsg);
  
 +int already_aliased = NULL;
++
  %}
  %expect 1
  
-@@ -108,7 +109,8 @@ extern int yyerror(const char* errmsg);
+@@ -108,6 +110,7 @@ extern int yyerror(const char* errmsg);
     t_list *list;
     t_axe_label *label;
     t_while_statement while_stmt;
--} 
 +   t_alias_statement alias_stmt;
-+}
+ } 
  /*=========================================================================
                                 TOKENS 
- =========================================================================*/
-@@ -125,6 +127,7 @@ extern int yyerror(const char* errmsg);
+@@ -125,6 +128,7 @@ extern int yyerror(const char* errmsg);
  %token READ
  %token WRITE
  
@@ -40,15 +39,15 @@ index ec9ef8b..d28c602 100644
  %token <label> DO
  %token <while_stmt> WHILE
  %token <label> IF
-@@ -247,6 +250,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+@@ -246,6 +250,7 @@ statements  : statements statement       { /* does nothing */ }
+ statement   : assign_statement SEMI      { /* does nothing */ }
              | control_statement          { /* does nothing */ }
              | read_write_statement SEMI  { /* does nothing */ }
-             | SEMI            { gen_nop_instruction(program); }
 +            | alias_statement            { /* does nothing */ }
+             | SEMI            { gen_nop_instruction(program); }
  ;
  
- control_statement : if_statement         { /* does nothing */ }
-@@ -418,6 +422,39 @@ return_statement : RETURN
+@@ -418,6 +423,39 @@ return_statement : RETURN
              }
  ;
  
@@ -89,10 +88,10 @@ index ec9ef8b..d28c602 100644
              {
                 int location;
 diff --git a/acse/axe_struct.h b/acse/axe_struct.h
-index 47663cc..0c4d4ac 100644
+index 47663cc..6561eec 100644
 --- a/acse/axe_struct.h
 +++ b/acse/axe_struct.h
-@@ -114,6 +114,12 @@ typedef struct t_while_statement
+@@ -114,6 +114,11 @@ typedef struct t_while_statement
                                      * that follows the while construct */
  } t_while_statement;
  
@@ -101,9 +100,9 @@ index 47663cc..0c4d4ac 100644
 +    int previous_location;
 +} t_alias_statement;
 +
-+
  /* create a label */
  extern t_axe_label * alloc_label(int value);
+ 
 diff --git a/tests/Makefile b/tests/Makefile
 index a3aed3b..bf3affa 100644
 --- a/tests/Makefile
@@ -118,3 +117,18 @@ index a3aed3b..bf3affa 100644
  
  test :
  	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/alias/alias.src b/tests/alias/alias.src
+new file mode 100644
+index 0000000..629b54b
+--- /dev/null
++++ b/tests/alias/alias.src
+@@ -0,0 +1,9 @@
++int a,b,c;
++a=3;
++b=5;
++c=7;
++alias a b {
++	a=a+1-c;
++}
++write(a);
++write(b);
