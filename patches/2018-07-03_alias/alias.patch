@@ -1,0 +1,105 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..38e581f 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"alias"           { return ALIAS; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..ec342d0 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -108,7 +108,8 @@ extern int yyerror(const char* errmsg);
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
+-} 
++   t_alias_statement alias_stmt;
++}
+ /*=========================================================================
+                                TOKENS 
+ =========================================================================*/
+@@ -125,6 +126,7 @@ extern int yyerror(const char* errmsg);
+ %token READ
+ %token WRITE
+ 
++%token <alias_stmt> ALIAS
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+@@ -247,6 +249,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
+             | SEMI            { gen_nop_instruction(program); }
++            | alias_statement            { /* does nothing */ }
+ ;
+ 
+ control_statement : if_statement         { /* does nothing */ }
+@@ -418,6 +421,31 @@ return_statement : RETURN
+             }
+ ;
+ 
++alias_statement: ALIAS IDENTIFIER IDENTIFIER
++                {
++                    /* Save location of the first */
++                    int error = 0;
++                    $1.previous_location = getLocation(program->sy_table,
++                                                       $2, &error);
++                    if (error) notifyError(error);
++
++                    /* Get location of the second */
++                    int loc_second = getLocation(program->sy_table, $3, &error);
++                    if (error) notifyError(error);
++
++                    /* Override location of the first with the second */
++                    setLocation(program->sy_table, $2, loc_second);
++                }
++                code_block
++                {
++                    /* Restore location of the first */
++                    setLocation(program->sy_table, $2, $1.previous_location);
++
++                    free($2);
++                    free($3);
++                }
++;
++
+ read_statement : READ LPAR IDENTIFIER RPAR 
+             {
+                int location;
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index 47663cc..0c4d4ac 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,12 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_alias_statement
++{
++    int previous_location;
++} t_alias_statement;
++
++
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..bf3affa 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,8 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc \
++alias
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
