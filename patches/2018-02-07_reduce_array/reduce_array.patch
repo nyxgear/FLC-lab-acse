@@ -1,0 +1,126 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..cd2c206 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"red"             { return RED; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..50dc3ce 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -108,6 +108,7 @@ extern int yyerror(const char* errmsg);
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
++   t_red* redval;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -126,6 +127,7 @@ extern int yyerror(const char* errmsg);
+ %token WRITE
+ 
+ %token <label> DO
++%token <redval> RED
+ %token <while_stmt> WHILE
+ %token <label> IF
+ %token <label> ELSE
+@@ -471,6 +473,42 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                      /* free the memory associated with the IDENTIFIER */
+                      free($1);
+    }
++   | RED {
++        $1 = malloc(sizeof(t_red));
++        // reserve register for accumulator
++        $1->acc_reg = gen_load_immediate(program, 0);
++        // reserve register for the index
++        $1->index_reg = gen_load_immediate(program, 0);
++
++        $1->label_to_inc = assignNewLabel(program);
++   }
++   LPAR IDENTIFIER RPAR
++   {
++        t_axe_variable * arr = getVariable(program, $4);
++        if (!arr->isArray)
++            notifyError(AXE_SYNTAX_ERROR);
++
++        int vreg = loadArrayElement(program, $4,
++                                    create_expression($1->index_reg, REGISTER));
++        gen_add_instruction(program, $1->acc_reg, $1->acc_reg, vreg, CG_DIRECT_ALL);
++
++
++        gen_addi_instruction(program, $1->index_reg, $1->index_reg, 1);
++
++        int arr_size_reg = gen_load_immediate(program, arr->arraySize);
++
++        t_axe_expression is_less =
++            handle_binary_comparison(program,
++                                     create_expression($1->index_reg, REGISTER),
++                                     create_expression(arr_size_reg, REGISTER),
++                                     _LT_);
++        gen_andb_instruction(program, is_less.value, is_less.value, is_less.value, CG_DIRECT_ALL);
++        gen_beq_instruction(program, $1->label_to_inc, 0);
++
++        free($1);
++
++        $$ = create_expression($1->acc_reg, REGISTER);
++   }
+    | IDENTIFIER LSQUARE exp RSQUARE {
+                      int reg;
+                      
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index 47663cc..4bea834 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,12 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_red {
++    t_axe_label *label_to_inc;
++    int acc_reg;
++    int index_reg;
++} t_red;
++
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..4b9a488 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,8 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc \
++red
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/red/red.src b/tests/red/red.src
+new file mode 100644
+index 0000000..431463c
+--- /dev/null
++++ b/tests/red/red.src
+@@ -0,0 +1,14 @@
++int v[2], a;
++a = 0;
++
++v[0] = 3;
++v[1] = 2;
++
++a=red(v);
++write(a);
++
++while( red(v) ){
++	v[0] = v[0]-1;
++	v[1] = v[0];
++	write(v[0]);
++}
