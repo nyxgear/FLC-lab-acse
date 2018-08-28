@@ -1,0 +1,161 @@
+diff -Naur acse_1.1.3/acse/Acse.lex acse_1.1.3_exists/acse/Acse.lex
+--- acse_1.1.3/acse/Acse.lex	2018-06-13 10:11:49.092117000 +0200
++++ acse_1.1.3_exists/acse/Acse.lex	2018-06-14 13:56:40.909583483 +0200
+@@ -97,6 +97,7 @@
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"exists"				{ return EXISTS; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff -Naur acse_1.1.3/acse/Acse.y acse_1.1.3_exists/acse/Acse.y
+--- acse_1.1.3/acse/Acse.y	2018-06-13 10:11:49.092117000 +0200
++++ acse_1.1.3_exists/acse/Acse.y	2018-06-15 10:00:38.416268286 +0200
+@@ -93,6 +93,13 @@
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
++struct t_exists{
++	char* id;
++  	int index_reg;
++   int array_size;
++} exists = {NULL, 0, 0};
++
++
+ %}
+ %expect 1
+ 
+@@ -132,6 +139,7 @@
+ %token <intval> TYPE
+ %token <svalue> IDENTIFIER
+ %token <intval> NUMBER
++%token <label> EXISTS
+ 
+ %type <expr> exp
+ %type <decl> declaration
+@@ -460,10 +468,14 @@
+ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    | IDENTIFIER  {
+                      int location;
+-   
+-                     /* get the location of the symbol with the given ID */
+-                     location = get_symbol_location(program, $1, 0);
+                      
++                     if (strcmp(exists.id, $1)){
++  		                   /* get the location of the symbol with the given ID */
++  		                   location = get_symbol_location(program, $1, 0);
++                     } else {
++	                     location = exists.index_reg;
++                     }
++                    
+                      /* return the register location of IDENTIFIER as
+                       * a value for `exp' */
+                      $$ = create_expression (location, REGISTER);
+@@ -474,6 +486,11 @@
+    | IDENTIFIER LSQUARE exp RSQUARE {
+                      int reg;
+                      
++                     t_axe_variable* v = getVariable(program, $1);
++                     
++                     if (exists.id != NULL){
++                     	exists.array_size = v->arraySize;
++                     }
+                      /* load the value IDENTIFIER[exp]
+                       * into `arrayElement' */
+                      reg = loadArrayElement(program, $1, $3);
+@@ -484,6 +501,37 @@
+                      /* free the memory associated with the IDENTIFIER */
+                      free($1);
+    }
++   | EXISTS IDENTIFIER {
++   	if (exists.id != NULL)
++   		notifyError(AXE_SYNTAX_ERROR);
++   		
++   	exists.id = strdup($2);
++   	exists.index_reg = gen_load_immediate(program, 0);
++   	exists.array_size = 0;
++   	$1 = assignNewLabel(program);
++   }
++   LPAR exp RPAR {
++   	// Increment the index
++   	gen_addi_instruction(program, exists.index_reg, exists.index_reg, 1);
++
++		// Define conditions to stop iteration
++   	t_axe_expression is_exp_zero = handle_binary_comparison (program, $5, create_expression(0, IMMEDIATE), _EQ_);
++   	t_axe_expression is_visit_not_completed = handle_binary_comparison (program, create_expression(exists.index_reg, REGISTER), create_expression(exists.array_size, IMMEDIATE), _LT_);
++
++   	handle_bin_numeric_op(program, is_exp_zero, is_visit_not_completed, ANDB);
++   	// if (is_exp_zero AND is_visit_not_completed) then jump to $1
++   	// else exit
++   	gen_bne_instruction(program, $1, 0);
++   	
++   	// If is_exp_zero==0 then exp is true (hence, exists is satisfied)
++	   $$ = handle_binary_comparison(program, is_exp_zero, create_expression(0, IMMEDIATE), _EQ_);
++
++	   free(exists.id);
++	   exists.id = NULL;
++	   exists.index_reg = 0;
++	   exists.array_size = 0;
++	   free($2);
++   }
+    | NOT_OP NUMBER   {  if ($2 == 0)
+                            $$ = create_expression (1, IMMEDIATE);
+                         else
+diff -Naur acse_1.1.3/tests/exists/test.src acse_1.1.3_exists/tests/exists/test.src
+--- acse_1.1.3/tests/exists/test.src	1970-01-01 01:00:00.000000000 +0100
++++ acse_1.1.3_exists/tests/exists/test.src	2018-06-15 10:04:39.764950006 +0200
+@@ -0,0 +1,53 @@
++int a[5];
++int x = 3;
++
++a[0] = 0;
++a[1] = 1;
++a[2] = 2;
++a[3] = 3;
++a[4] = 4;
++
++
++
++if ( exists i (a[i]>2) )
++	write(1);
++else
++	write(0);
++
++
++if ( exists i (a[i]>10) )
++	write(1);
++else
++	write(0);
++	
++if ( exists i (a[3]>2) )
++	write(1);
++else
++	write(0);
++	
++if ( exists i (a[x]>2) )
++	write(1);
++else
++	write(0);
++	
++if ( exists x (a[x]>10) )
++	write(1);
++else
++	write(0);
++	
++	
++if ( exists i (a[2*i]>2) )
++	write(1);
++else
++	write(0);
++
++
++if ( exists i (a[i/3]>2) )
++	write(1);
++else
++	write(0);
++	
++if ( exists i (a[i]/x == 1) )
++	write(1);
++else
++	write(0);
