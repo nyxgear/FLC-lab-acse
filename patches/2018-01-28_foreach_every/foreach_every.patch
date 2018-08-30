@@ -1,0 +1,179 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..7ed35b6 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -91,6 +91,9 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "do"              { return DO; }
+ "else"            { return ELSE; }
+ "for"             { return FOR; }
++"foreach"         { return FOREACH; }
++"in"              { return IN; }
++"every"           { return EVERY; }
+ "if"              { return IF; }
+ "int"             { yylval.intval = INTEGER_TYPE; return TYPE; }
+ "while"           { return WHILE; }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..3b31020 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -108,6 +108,7 @@ extern int yyerror(const char* errmsg);
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
++   t_foreach_every * foreach_every_stmt;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -121,12 +122,16 @@ extern int yyerror(const char* errmsg);
+ %token ANDAND OROR
+ %token COMMA
+ %token FOR
++%token IN
++%token EVERY
+ %token RETURN
+ %token READ
+ %token WRITE
+ 
++
+ %token <label> DO
+ %token <while_stmt> WHILE
++%token <foreach_every_stmt> FOREACH
+ %token <label> IF
+ %token <label> ELSE
+ %token <intval> TYPE
+@@ -252,6 +257,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
++            | foreach_every_statement SEMI { /* does nothing */ }
+             | return_statement SEMI      { /* does nothing */ }
+ ;
+ 
+@@ -411,6 +417,78 @@ do_while_statement  : DO
+                      }
+ ;
+ 
++foreach_every_statement: FOREACH IDENTIFIER IN IDENTIFIER {
++                /**
++                typedef struct t_foreach_every {
++                    t_axe_label * main_loop_start;
++                    t_axe_label * main_loop_end;
++                    int index_reg;
++                    int every_index_reg;
++                } t_foreach_every;
++                */
++
++                $1 = malloc(sizeof(t_foreach_every));
++                $1->main_loop_start = newLabel(program);
++                $1->main_loop_end = newLabel(program);
++
++
++                t_axe_variable *elem = getVariable(program, $2);
++                if (elem->isArray)
++                    notifyError(AXE_SYNTAX_ERROR);
++
++                t_axe_variable *arr = getVariable(program, $4);
++                if (!arr->isArray)
++                    notifyError(AXE_SYNTAX_ERROR);
++
++                $1->index_reg = gen_load_immediate(program, 0);
++                $1->every_index_reg = gen_load_immediate(program, 1);
++
++
++                assignLabel(program, $1->main_loop_start);
++
++
++                // load the array element into the register of the elem variable
++                int vreg = get_symbol_location(program, $2, 0);
++                int arr_elem = loadArrayElement(program, $4, create_expression($1->index_reg, REGISTER));
++                gen_add_instruction(program, vreg, REG_0, arr_elem, CG_DIRECT_ALL);
++            } code_block EVERY NUMBER DO {
++
++                t_axe_variable *arr = getVariable(program, $4);
++                if (arr->arraySize < $8)
++                    notifyError(AXE_SYNTAX_ERROR);
++
++
++                // inc the for loop index of 1
++                gen_addi_instruction(program, $1->index_reg, $1->index_reg, 1);
++
++                int every_target = getNewRegister(program);
++                gen_muli_instruction(program, every_target, $1->every_index_reg, $8);
++
++                gen_sub_instruction(program, every_target, every_target, $1->index_reg, CG_DIRECT_ALL);
++
++                gen_bne_instruction(program, $1->main_loop_end, 0);
++
++            } code_block {
++
++                assignLabel(program, $1->main_loop_end);
++
++
++                gen_addi_instruction(program, $1->index_reg, $1->index_reg, 1);
++
++                t_axe_variable *arr = getVariable(program, $4);
++
++                int random_reg = getNewRegister(program);
++
++                handle_binary_comparison(program,
++                                         create_expression($1->index_reg, REGISTER),
++                                         create_expression(arr->arraySize, IMMEDIATE),
++                                         _LT_);
++                gen_beq_instruction(program, $1->main_loop_start, 0);
++
++                free($2);
++                free($4);
++            }
++;
+ return_statement : RETURN
+             {
+                /* insert an HALT instruction */
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index 47663cc..4c36232 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,14 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_foreach_every {
++    t_axe_label * main_loop_start;
++    t_axe_label * main_loop_end;
++    int index_reg;
++    int every_index_reg;
++} t_foreach_every;
++
++
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..b6283cf 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,8 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc \
++foreach_every
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/foreach_every/foreach_every.src b/tests/foreach_every/foreach_every.src
+new file mode 100644
+index 0000000..1ade7f8
+--- /dev/null
++++ b/tests/foreach_every/foreach_every.src
+@@ -0,0 +1,10 @@
++int elem, v[10], a;
++
++a = 0;
++
++foreach elem in v {
++	a = a + elem;
++} every 2 do {
++	write(a);
++	a = elem;
++};

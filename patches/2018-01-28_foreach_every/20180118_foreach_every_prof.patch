@@ -1,0 +1,165 @@
+diff -rbcN acse_1.1.2/acse/Acse.lex acse_1.1.2_foreach_every/acse/Acse.lex
+*** acse_1.1.2/acse/Acse.lex	2018-01-09 13:29:33.070594166 +0100
+--- acse_1.1.2_foreach_every/acse/Acse.lex	2018-01-13 18:41:04.981107117 +0100
+***************
+*** 91,96 ****
+--- 91,99 ----
+  "do"              { return DO; }
+  "else"            { return ELSE; }
+  "for"             { return FOR; }
++ "foreach"         { return FOREACH; }
++ "in"              { return IN; }
++ "every"           { return EVERY; }
+  "if"              { return IF; }
+  "int"             { yylval.intval = INTEGER_TYPE; return TYPE; }
+  "while"           { return WHILE; }
+diff -rbcN acse_1.1.2/acse/Acse.y acse_1.1.2_foreach_every/acse/Acse.y
+*** acse_1.1.2/acse/Acse.y	2018-01-09 13:29:33.070594166 +0100
+--- acse_1.1.2_foreach_every/acse/Acse.y	2018-01-13 21:29:12.962615761 +0100
+***************
+*** 126,131 ****
+--- 126,134 ----
+  %token WRITE
+  
+  %token <label> DO
++ %token <while_stmt> FOREACH
++ %token <while_stmt> EVERY
++ %token <intval> IN
+  %token <while_stmt> WHILE
+  %token <label> IF
+  %token <label> ELSE
+***************
+*** 253,258 ****
+--- 256,262 ----
+              | while_statement            { /* does nothing */ }
+              | do_while_statement SEMI    { /* does nothing */ }
+              | return_statement SEMI      { /* does nothing */ }
++             | for_every_statement SEMI   { /* does nothing */ }
+  ;
+  
+  read_write_statement : read_statement  { /* does nothing */ }
+***************
+*** 411,416 ****
+--- 415,488 ----
+                       }
+  ;
+  
++ for_every_statement : FOREACH IDENTIFIER IN IDENTIFIER
++                     {
++                       t_axe_variable *elem = getVariable(program, $2);
++                       t_axe_variable *array = getVariable(program, $4);
++                       if (elem->isArray || !array->isArray)
++                       {
++                         notifyError(AXE_INVALID_VARIABLE);
++                       }
++ 
++                       /* initialize implicit index to 0 */
++                       $3 = gen_load_immediate(program, 0);
++ 
++                       /* load array element into a new register */
++                       t_axe_expression index_exp = create_expression($3, REGISTER);
++                       int load_reg = loadArrayElement(program, $4, index_exp);
++                       /* get register where value of elem variable is stored */
++                       int elem_reg = get_symbol_location(program, $2, 0);
++                       /* move the value from load_reg into elem_reg */
++                       gen_andb_instruction(program, elem_reg, load_reg, load_reg, CG_DIRECT_ALL);
++ 
++                       $1.label_condition = assignNewLabel(program);
++                       $1.label_end = newLabel(program);
++                     }
++                     code_block EVERY exp DO
++                     {
++                       if ($8.expression_type != IMMEDIATE) {
++                         notifyError(AXE_INVALID_EXPRESSION);
++                       }
++                       t_axe_variable *array = getVariable(program, $4);
++                       if ($8.value <= 1 || $8.value >= array->arraySize) {
++                         notifyError(AXE_INVALID_EXPRESSION);
++                       }
++ 
++                       $7.label_end = newLabel(program);
++                       gen_bt_instruction(program, $7.label_end, 0);
++                       $7.label_condition = assignNewLabel(program);
++                     }
++                     code_block
++                     {
++                       assignLabel(program, $7.label_end);
++                       /* increment index */
++                       gen_addi_instruction(program, $3, $3, 1);
++ 
++                       /* check exit condition */
++                       int tmp_reg = getNewRegister(program);
++                       t_axe_variable *array = getVariable(program, $4);
++                       gen_subi_instruction(program, tmp_reg, $3, array->arraySize);
++                       gen_beq_instruction(program, $1.label_end, 0);
++ 
++                       /* load element */
++                       t_axe_expression index_exp = create_expression($3, REGISTER);
++                       int load_reg = loadArrayElement(program, $4, index_exp);
++                       int elem_reg = get_symbol_location(program, $2, 0);
++                       gen_andb_instruction(program, elem_reg, load_reg, load_reg, CG_DIRECT_ALL);
++ 
++                       /* check which code block should be executed */
++                       /* index % k == 0 ...but % operator is not available */
++                       /* (index / k) * k - index == 0 */
++                       gen_divi_instruction(program, tmp_reg, $3, $8.value);
++                       gen_muli_instruction(program, tmp_reg, tmp_reg, $8.value);
++                       gen_sub_instruction(program, tmp_reg, tmp_reg, $3, CG_DIRECT_ALL);
++ 
++                       gen_beq_instruction(program, $7.label_condition, 0);
++                       gen_bt_instruction(program, $1.label_condition, 0);
++                       assignLabel(program, $1.label_end);
++                     }
++ ;
++ 
+  return_statement : RETURN
+              {
+                 /* insert an HALT instruction */
+diff -rbcN acse_1.1.2/tests/arrays3/arrays3.src acse_1.1.2_foreach_every/tests/arrays3/arrays3.src
+*** acse_1.1.2/tests/arrays3/arrays3.src	1970-01-01 01:00:00.000000000 +0100
+--- acse_1.1.2_foreach_every/tests/arrays3/arrays3.src	2018-01-14 02:36:54.917981468 +0100
+***************
+*** 0 ****
+--- 1,22 ----
++ int a[7];
++ int elem;
++ int tmp = 0;
++ 
++ 
++ a[0] = 0;
++ a[1] = 1;
++ a[2] = 2;
++ a[3] = 3;
++ a[4] = 4;
++ a[5] = 5;
++ a[6] = 6;
++ 
++ 
++ foreach elem in a {
++   tmp = tmp + elem;
++ } every 2 do {
++   write(tmp);
++   tmp = 0;
++ };
++ 
++ write(tmp);
+diff -rbcN acse_1.1.2/tests/Makefile acse_1.1.2_foreach_every/tests/Makefile
+*** acse_1.1.2/tests/Makefile	2018-01-09 13:29:33.078594203 +0100
+--- acse_1.1.2_foreach_every/tests/Makefile	2018-01-14 02:23:09.421733087 +0100
+***************
+*** 1,7 ****
+  asm=$(CURDIR)/../bin/asm
+  acse=$(CURDIR)/../bin/acse
+  export asm acse
+! dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
+  
+  test :
+  	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+--- 1,7 ----
+  asm=$(CURDIR)/../bin/asm
+  acse=$(CURDIR)/../bin/acse
+  export asm acse
+! dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc arrays3
+  
+  test :
+  	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
