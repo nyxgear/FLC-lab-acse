@@ -1,0 +1,227 @@
+diff -Naur acse_1.1.1/acse/Acse.lex acse_1.1.1_iterator/acse/Acse.lex
+--- acse_1.1.1/acse/Acse.lex	2016-02-02 23:05:13.000000000 +0100
++++ acse_1.1.1_iterator/acse/Acse.lex	2017-09-08 09:48:25.631021399 +0200
+@@ -98,6 +98,7 @@
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"iterateon"			{ return ON; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff -Naur acse_1.1.1/acse/Acse.y acse_1.1.1_iterator/acse/Acse.y
+--- acse_1.1.1/acse/Acse.y	2016-02-02 23:05:13.000000000 +0100
++++ acse_1.1.1_iterator/acse/Acse.y	2017-09-11 22:59:07.838442636 +0200
+@@ -89,6 +89,8 @@
+ 
+ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ 
++t_list *on_stmt_map = NULL;
++
+ %}
+ 
+ %expect 1
+@@ -121,6 +123,7 @@
+ %token RETURN
+ %token READ
+ %token WRITE
++%token ON
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -243,6 +246,7 @@
+ statement   : assign_statement SEMI      { /* does nothing */ }
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
++				| on_statement					  {}
+             | SEMI            { gen_nop_instruction(program); }
+ ;
+ 
+@@ -278,6 +282,8 @@
+                int location;
+                t_axe_instruction *instr;
+ 
++					t_axe_variable* v = getVariable(program, $1);
++
+                /* in order to assign a value to a variable, we have to
+                 * know where the variable is located (i.e. in which register).
+                 * the function `get_symbol_location' is used in order
+@@ -288,21 +294,62 @@
+                 * `get_symbol_location' perform a query on the symbol table
+                 * in order to discover the correct location of
+                 * the variable with $1 as identifier */
++
++					if (!v) notifyError(AXE_VARIABLE_ID_UNSPECIFIED);
++
++					if (v->isArray){
++						t_list *map = on_stmt_map;
++						if (map == NULL) notifyError(AXE_SYNTAX_ERROR);
++
++						t_on_statement *cur_on = (t_on_statement*) LDATA(map);						
++						while( map != NULL && strcmp(cur_on->id, $1) ){
++							map = LNEXT(map);
++							cur_on = (t_on_statement*) LDATA(map);
++						}
++						if (map == NULL) notifyError(AXE_SYNTAX_ERROR);
++
++						handle_binary_comparison(program, create_expression(cur_on->reg, REGISTER), create_expression(v->arraySize, IMMEDIATE), _GTEQ_);
++						gen_bne_instruction(program, cur_on->label_end, 0);								
++
++						storeArrayElement(program, $1, create_expression(cur_on->reg, REGISTER), $3);
++
++						gen_addi_instruction(program, cur_on->reg, cur_on->reg, 1);
++					}
++					else{
++
+                
+-               /* get the location of the symbol with the given ID. */
+-               location = get_symbol_location(program, $1, 0);
++		            /* get the location of the symbol with the given ID. */
++		            location = get_symbol_location(program, $1, 0);
+ 
+-               /* update the value of location */
+-               if ($3.expression_type == IMMEDIATE)
+-                  gen_move_immediate(program, location, $3.value);
+-               else
+-                  instr = gen_add_instruction
+-                        (program, location, REG_0, $3.value, CG_DIRECT_ALL);
++		            /* update the value of location */
++		            if ($3.expression_type == IMMEDIATE)
++		               gen_move_immediate(program, location, $3.value);
++		            else
++		               instr = gen_add_instruction
++		                     (program, location, REG_0, $3.value, CG_DIRECT_ALL);
++
++					}
+ 
+                /* free the memory associated with the IDENTIFIER */
+                free($1);
+             }
+ ;
++
++on_statement	: ON IDENTIFIER {
++							t_on_statement *m = malloc(sizeof(t_on_statement));
++
++							m->reg = gen_load_immediate(program, 0);;
++							m->id = $2;
++							m->label_end = newLabel(program);
++
++							on_stmt_map = addFirst(on_stmt_map, (t_on_statement*)m);
++
++					  } code_block {
++							free($2);
++							assignLabel(program, ((t_on_statement*)LDATA(on_stmt_map))->label_end);
++							on_stmt_map = removeFirst(on_stmt_map);
++                 }
++						
+             
+ if_statement   : if_stmt
+                {
+@@ -454,17 +501,41 @@
+ 
+ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    | IDENTIFIER  {
+-                     int location;
+-   
+-                     /* get the location of the symbol with the given ID */
+-                     location = get_symbol_location(program, $1, 0);
+-                     
+-                     /* return the register location of IDENTIFIER as
+-                      * a value for `exp' */
+-                     $$ = create_expression (location, REGISTER);
++							t_axe_variable* v = getVariable(program, $1);
++  						   int location;
++
++							if (!v) notifyError(AXE_VARIABLE_ID_UNSPECIFIED);
++
++							if (v->isArray){
++								t_list *map = on_stmt_map;
+ 
+-                     /* free the memory associated with the IDENTIFIER */
+-                     free($1);
++								if (map == NULL) notifyError(AXE_SYNTAX_ERROR);
++								t_on_statement *cur_on = (t_on_statement*) LDATA(map);
++					
++								while( map != NULL && strcmp(cur_on->id, $1) ){
++									map = LNEXT(map);
++									cur_on = (t_on_statement*) LDATA(map);
++								}
++								if (map == NULL) notifyError(AXE_SYNTAX_ERROR);
++
++								handle_binary_comparison(program, create_expression(cur_on->reg, REGISTER), create_expression(v->arraySize, IMMEDIATE), _GTEQ_);
++								gen_bne_instruction(program, cur_on->label_end, 0);								
++
++								location = loadArrayElement(program, $1, create_expression(cur_on->reg, REGISTER));
++
++								gen_addi_instruction(program, cur_on->reg, cur_on->reg, 1);
++							}
++							else{
++		                  /* get the location of the symbol with the given ID */
++		                  location = get_symbol_location(program, $1, 0);
++		                }  
++	                  /* return the register location of IDENTIFIER as
++	                   * a value for `exp' */
++	                  $$ = create_expression (location, REGISTER);
++
++	                  /* free the memory associated with the IDENTIFIER */
++	                  free($1);
++							
+    }
+    | IDENTIFIER LSQUARE exp RSQUARE {
+                      int reg;
+diff -Naur acse_1.1.1/acse/axe_struct.h acse_1.1.1_iterator/acse/axe_struct.h
+--- acse_1.1.1/acse/axe_struct.h	2016-02-02 19:26:33.000000000 +0100
++++ acse_1.1.1_iterator/acse/axe_struct.h	2017-09-07 23:13:35.045971982 +0200
+@@ -114,6 +114,15 @@
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++
++typedef struct t_on_statement
++{
++   int reg;
++   char *id;         
++	t_axe_label *label_end;  
++} t_on_statement;
++
++
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff -Naur acse_1.1.1/tests/on_stmt/on.src acse_1.1.1_iterator/tests/on_stmt/on.src
+--- acse_1.1.1/tests/on_stmt/on.src	1970-01-01 01:00:00.000000000 +0100
++++ acse_1.1.1_iterator/tests/on_stmt/on.src	2017-09-11 23:37:02.850536224 +0200
+@@ -0,0 +1,33 @@
++int a[5];
++int b[8];
++int c[10];
++int i;
++
++a[0]=0;
++a[1]=1;
++a[2]=2;
++a[3]=3;
++a[4]=4;
++
++b[0]=10;
++b[1]=10;
++b[2]=10;
++b[3]=10;
++b[4]=10;
++
++c[0]=0;
++c[1]=0;
++c[2]=0;
++c[3]=0;
++c[4]=0;
++
++i=1;
++iterateon c{
++		iterateon b
++			iterateon a
++				while(i){ 
++					c = a + b;
++					iterateon c
++						while(i) write(c);
++				}	
++}
