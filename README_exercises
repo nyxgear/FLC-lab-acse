@@ -41,14 +41,18 @@ make test
 ----------------------------------------------------------
 Create a new patch file
 mkdir -p patches/new_patch
-git diff > patches/new_patch/patch-name.patch
+make clean
+git add .
+git diff --staged > patches/new_patch/patch-name.patch
 
 
 ----------------------------------------------------------
 Commit new patch file and restore the git repository status
 
 1. Save only the patch file with a commit (do not inlcude changes already into the patch)
+git reset .
 git add patches/new_patch/patch-name.patch
+OR just: git add patches/
 git commit -m 'new patch'
 
 3. Restore repository status
