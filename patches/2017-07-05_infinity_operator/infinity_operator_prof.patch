@@ -1,0 +1,293 @@
+diff -Naur ./acse_1.1.1/acse/Acse.lex ./acse_1.1.1_infty/acse/Acse.lex
+--- ./acse_1.1.1/acse/Acse.lex	2016-02-02 23:05:13.000000000 +0100
++++ ./acse_1.1.1_infty/acse/Acse.lex	2017-06-30 14:31:48.835318493 +0200
+@@ -98,6 +98,9 @@
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"+infty"				{ return PLUSINFTY; }
++"-infty"				{ return MINUSINFTY; }
++"?"					{ return UNDEF; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff -Naur ./acse_1.1.1/acse/Acse.y ./acse_1.1.1_infty/acse/Acse.y
+--- ./acse_1.1.1/acse/Acse.y	2016-02-02 23:05:13.000000000 +0100
++++ ./acse_1.1.1_infty/acse/Acse.y	2017-07-04 18:58:28.906513454 +0200
+@@ -121,6 +121,7 @@
+ %token RETURN
+ %token READ
+ %token WRITE
++%token PLUSINFTY MINUSINFTY UNDEF
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -129,7 +130,7 @@
+ %token <intval> TYPE
+ %token <svalue> IDENTIFIER
+ %token <intval> NUMBER
+-
++ 
+ %type <expr> exp
+ %type <decl> declaration
+ %type <list> declaration_list
+@@ -190,11 +191,23 @@
+ declaration_list  : declaration_list COMMA declaration
+                   {  /* add the new declaration to the list of declarations */
+                      $$ = addElement($1, $3, -1);
++							if (! $3->isArray){
++								char* s = malloc(sizeof(char)*strlen($3->ID) + 3);
++								strcpy(s, $3->ID);
++								s = strcat(s, "_i");
++								$$ = addElement($$, alloc_declaration(s, 0, 0, 0), -1);
++							}
+                   }
+                   | declaration
+                   {
+                      /* add the new declaration to the list of declarations */
+                      $$ = addElement(NULL, $1, -1);
++							if (! $1->isArray){
++								char* s = malloc(sizeof(char)*strlen($1->ID) + 3);
++								strcpy(s, $1->ID);
++								s = strcat(s, "_i");
++								$$ = addElement($$, alloc_declaration(s, 0, 0, 0), -1);
++							}
+                   }
+ ;
+ 
+@@ -275,7 +288,7 @@
+             }
+             | IDENTIFIER ASSIGN exp
+             {
+-               int location;
++               int location, infty;
+                t_axe_instruction *instr;
+ 
+                /* in order to assign a value to a variable, we have to
+@@ -291,14 +304,17 @@
+                
+                /* get the location of the symbol with the given ID. */
+                location = get_symbol_location(program, $1, 0);
++					infty = get_symbol_location(program, strcat($1,"_i"), 0);
+ 
+                /* update the value of location */
+-               if ($3.expression_type == IMMEDIATE)
++               if ($3.expression_type == IMMEDIATE){
+                   gen_move_immediate(program, location, $3.value);
+-               else
+-                  instr = gen_add_instruction
+-                        (program, location, REG_0, $3.value, CG_DIRECT_ALL);
+-
++						gen_addi_instruction(program, infty, REG_0, $3.infty);
++					}
++               else{
++                  gen_add_instruction(program, location, REG_0, $3.value, CG_DIRECT_ALL);
++						gen_add_instruction(program, infty, REG_0, $3.infty, CG_DIRECT_ALL);
++					}
+                /* free the memory associated with the IDENTIFIER */
+                free($1);
+             }
+@@ -415,7 +431,7 @@
+ 
+ read_statement : READ LPAR IDENTIFIER RPAR 
+             {
+-               int location;
++               int location, infty;
+                
+                /* read from standard input an integer value and assign
+                 * it to a variable associated with the given identifier */
+@@ -424,9 +440,11 @@
+                /* lookup the symbol table and fetch the register location
+                 * associated with the IDENTIFIER $3. */
+                location = get_symbol_location(program, $3, 0);
++					infty = get_symbol_location(program, strcat($3,"_i"), 0);
+ 
+                /* insert a read instruction */
+                gen_read_instruction (program, location);
++					gen_addi_instruction(program, infty, REG_0, 1);
+ 
+                /* free the memory associated with the IDENTIFIER */
+                free($3);
+@@ -436,32 +454,40 @@
+ write_statement : WRITE LPAR exp RPAR 
+             {
+    
+-               int location;
++               int location, infty;
+ 
+                if ($3.expression_type == IMMEDIATE)
+                {
+                   /* load `immediate' into a new register. Returns the new register
+                    * identifier or REG_INVALID if an error occurs */
+                   location = gen_load_immediate(program, $3.value);
++						infty = gen_load_immediate(program, $3.infty);
+                }
+-               else
+-                  location = $3.value;
+-
+-               /* write to standard output an integer value */
+-               gen_write_instruction (program, location);
++               else 
++					{	
++						location = $3.value;
++						infty = $3.infty;
++					}
++					gen_write_instruction (program, location);
++					gen_write_instruction (program, infty);
+             }
+ ;
+ 
+-exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
++exp: NUMBER      { $$ = create_expression_inf ($1, 1, IMMEDIATE); }
++	| UNDEF       { $$ = create_expression_inf(0, 0, IMMEDIATE); }
++	| PLUSINFTY	  { $$ = create_expression_inf(1, -1, IMMEDIATE); }
++	| MINUSINFTY  { $$ = create_expression_inf (2, -1, IMMEDIATE); }	
+    | IDENTIFIER  {
+-                     int location;
++                     int location, infty;
+    
+                      /* get the location of the symbol with the given ID */
+                      location = get_symbol_location(program, $1, 0);
++							infty = get_symbol_location(program, strcat($1,"_i"), 0);
+                      
+                      /* return the register location of IDENTIFIER as
+                       * a value for `exp' */
+-                     $$ = create_expression (location, REGISTER);
++                     $$ = create_expression_inf (location, infty, REGISTER);
++							
+ 
+                      /* free the memory associated with the IDENTIFIER */
+                      free($1);
+@@ -513,13 +539,13 @@
+                            $$ = handle_bin_numeric_op(program, $1, $3, ORB);
+    }
+    | exp PLUS exp       {
+-                           $$ = handle_bin_numeric_op(program, $1, $3, ADD);
++									$$ = handle_bin_numeric_op(program, $1, $3, ADD);
+    }
+    | exp MINUS exp      {
+                            $$ = handle_bin_numeric_op(program, $1, $3, SUB);
+    }
+    | exp MUL_OP exp     {
+-                           $$ = handle_bin_numeric_op(program, $1, $3, MUL);
++									$$ = handle_bin_numeric_op(program, $1, $3, MUL);
+    }
+    | exp DIV_OP exp     {
+                            $$ = handle_bin_numeric_op(program, $1, $3, DIV);
+@@ -531,8 +557,34 @@
+                         $$ = handle_binary_comparison (program, $1, $3, _GT_);
+    }
+    | exp EQ exp      {
+-                        $$ = handle_binary_comparison (program, $1, $3, _EQ_);
+-   }
++                        if (($1.expression_type == IMMEDIATE) && ($3.expression_type == IMMEDIATE)) {
++										int undef = ($1.infty * $3.infty != 0);
++										int value = (($1.infty + $3.infty) * ($1.value == $3.value)) != 0;
++										$$ = create_expression_inf(value, undef, IMMEDIATE);
++									} 
++									/*else if (($1.expression_type == REGISTER) && ($3.expression_type == IMMEDIATE)){
++									}
++									else if (($1.expression_type == IMMEDIATE) && ($3.expression_type == REGISTER)){
++									}*/
++                           else{
++										int temp_reg = getNewRegister(program);
++										int infty_reg = getNewRegister(program);
++										int value_reg = getNewRegister(program);
++				
++										gen_mul_instruction(program, infty_reg, $1.infty, $3.infty, CG_DIRECT_ALL);
++										gen_sne_instruction(program, infty_reg);
++										
++										gen_eorl_instruction(program, value_reg, $1.infty, $3.infty, CG_DIRECT_ALL);
++										gen_seq_instruction(program, value_reg);
++
++										gen_sub_instruction(program, temp_reg, $1.value, $3.value, CG_DIRECT_ALL);
++										gen_seq_instruction(program, temp_reg);
++									
++										gen_mul_instruction(program, value_reg, temp_reg, value_reg, CG_DIRECT_ALL);
++
++										$$ = create_expression_inf(value_reg, infty_reg, REGISTER);
++									}
++							}
+    | exp NOTEQ exp   {
+                         $$ = handle_binary_comparison (program, $1, $3, _NOTEQ_);
+    }
+diff -Naur ./acse_1.1.1/acse/axe_engine.c ./acse_1.1.1_infty/acse/axe_engine.c
+--- ./acse_1.1.1/acse/axe_engine.c	2016-02-02 19:26:33.000000000 +0100
++++ ./acse_1.1.1_infty/acse/axe_engine.c	2017-07-04 18:47:36.828777282 +0200
+@@ -740,7 +740,7 @@
+       case SUB : opcode_to_string = "SUB"; break;
+       case ANDL : opcode_to_string = "ANDL"; break;
+       case ORL : opcode_to_string = "ORL"; break;
+-      case EORL : opcode_to_string = "EORL"; break;
++      case EORL : opcode_to_string = "XORL"; break;
+       case ANDB : opcode_to_string = "ANDB"; break;
+       case ORB : opcode_to_string = "ORB"; break;
+       case EORB : opcode_to_string = "EORB"; break;
+diff -Naur ./acse_1.1.1/acse/axe_struct.c ./acse_1.1.1_infty/acse/axe_struct.c
+--- ./acse_1.1.1/acse/axe_struct.c	2016-02-02 19:26:33.000000000 +0100
++++ ./acse_1.1.1_infty/acse/axe_struct.c	2017-06-28 12:51:05.726059000 +0200
+@@ -20,6 +20,19 @@
+    return expression;
+ }
+ 
++/* create an expression */
++t_axe_expression create_expression_inf (int value, int inf, int type)
++{
++   t_axe_expression expression;
++
++   expression.value = value;
++   expression.expression_type = type;
++	expression.infty = inf;
++
++   return expression;
++}
++
++
+ /* create and initialize an instance of `t_axe_register' */
+ t_axe_register * alloc_register(int ID, int indirect)
+ {
+diff -Naur ./acse_1.1.1/acse/axe_struct.h ./acse_1.1.1_infty/acse/axe_struct.h
+--- ./acse_1.1.1/acse/axe_struct.h	2016-02-02 19:26:33.000000000 +0100
++++ ./acse_1.1.1_infty/acse/axe_struct.h	2017-06-28 12:50:00.965941000 +0200
+@@ -94,6 +94,7 @@
+ {
+    int value;           /* an immediate value or a register identifier */
+    int expression_type; /* actually only integer values are supported */
++	int infty;
+ } t_axe_expression;
+ 
+ typedef struct t_axe_declaration
+@@ -120,6 +121,9 @@
+ /* create an expression */
+ extern t_axe_expression create_expression (int value, int type);
+ 
++/* create an expression */
++extern t_axe_expression create_expression_inf (int value, int inf, int type);
++
+ /* create an instance that will mantain infos about a while statement */
+ extern t_while_statement create_while_statement();
+ 
+diff -Naur ./acse_1.1.1/tests/infty/inf.src ./acse_1.1.1_infty/tests/infty/inf.src
+--- ./acse_1.1.1/tests/infty/inf.src	1970-01-01 01:00:00.000000000 +0100
++++ ./acse_1.1.1_infty/tests/infty/inf.src	2017-06-30 14:32:43.115709195 +0200
+@@ -0,0 +1,20 @@
++int a,b,c,d;
++
++read(a);
++read(b);
++
++b = +infty;
++c = -infty;
++
++write(a);
++write(b);
++write(b == b);
++write(a == b);
++write(b == c);
++write(d == c);
++
++write(+infty == -infty);
++write(+infty == +infty);
++write(-infty == -infty);
++write(? == ?);
++write(? == b);
