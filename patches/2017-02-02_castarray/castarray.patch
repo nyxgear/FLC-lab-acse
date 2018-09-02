@@ -1,0 +1,55 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..e3eee2c 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -98,6 +98,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "read"            { return READ; }
+ "write"           { return WRITE; }
+ 
++"(bit)"{ID}       { yylval.svalue=strndup(yytext+5, ((int)strlen(yytext))-5); return BITIDENTIFIER; }
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+                     return(NUMBER); }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..a295481 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -131,6 +131,7 @@ extern int yyerror(const char* errmsg);
+ %token <label> ELSE
+ %token <intval> TYPE
+ %token <svalue> IDENTIFIER
++%token <svalue> BITIDENTIFIER
+ %token <intval> NUMBER
+ 
+ %type <expr> exp
+@@ -458,6 +459,30 @@ write_statement : WRITE LPAR exp RPAR
+ ;
+ 
+ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
++   | BITIDENTIFIER  {
++        int location = get_symbol_location(program, $1, 0);
++        t_axe_variable * var = getVariable(program, $1);
++        if (var->isArray != 0) {
++            location = gen_load_immediate(program, 0);
++            int index_reg = gen_load_immediate(program, var->arraySize);
++            t_axe_label * skip = newLabel(program);
++            t_axe_label * top = assignNewLabel(program);
++            gen_subi_instruction(program, index_reg, index_reg, 1);
++            int varr = loadArrayElement(program, var->ID, create_expression(index_reg, REGISTER));
++            gen_andb_instruction(program, varr, varr, varr, CG_DIRECT_ALL);
++            // skip increment of new value if it was zero the one of the array
++            gen_beq_instruction(program, skip, 0);
++            int v_to_add = gen_load_immediate(program, 1);
++            gen_shl_instruction(program, v_to_add, v_to_add, index_reg, CG_DIRECT_ALL);
++            gen_add_instruction(program, location, location, v_to_add, CG_DIRECT_ALL);
++            assignLabel(program, skip);
++            gen_andb_instruction(program, index_reg, index_reg, index_reg, CG_DIRECT_ALL);
++            gen_bne_instruction(program, top, 0);
++        }
++
++        $$ = create_expression (location, REGISTER);
++        free($1);
++   }
+    | IDENTIFIER  {
+                      int location;
+    
