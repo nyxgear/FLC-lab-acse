@@ -1,0 +1,63 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..d34fd62 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"iif"             { return IIF; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..e905878 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -128,6 +128,7 @@ extern int yyerror(const char* errmsg);
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
++%token <label> IIF
+ %token <label> ELSE
+ %token <intval> TYPE
+ %token <svalue> IDENTIFIER
+@@ -249,10 +250,17 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+             | SEMI            { gen_nop_instruction(program); }
+ ;
+ 
++statement_semi : assign_statement SEMI      { /* does nothing */ }
++            | control_statement SEMI        { /* does nothing */ }
++            | read_write_statement SEMI  { /* does nothing */ }
++            | SEMI            { gen_nop_instruction(program); }
++;
++
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
+             | return_statement SEMI      { /* does nothing */ }
++            | iif_statement              { /* does nothing */ }
+ ;
+ 
+ read_write_statement : read_statement  { /* does nothing */ }
+@@ -388,6 +396,20 @@ while_statement  : WHILE
+                      assignLabel(program, $1.label_end);
+                   }
+ ;
++
++iif_statement: IIF LPAR statement_semi exp RPAR
++             {
++                $1 = newLabel(program);
++                if ($4.expression_type == IMMEDIATE) {
++                    gen_load_immediate(program, $4.value);
++                } else {
++                    gen_andb_instruction(program, $4.value, $4.value, $4.value, CG_DIRECT_ALL);
++                }
++                gen_beq_instruction(program, $1, 0);
++
++             } code_block {
++                assignLabel(program, $1);
++             }
+                   
+ do_while_statement  : DO
+                      {
