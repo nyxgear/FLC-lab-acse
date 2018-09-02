@@ -1,0 +1,87 @@
+diff -Naur ./acse_1.1.1/acse/Acse.lex ./acse_1.1.1_cast_array/acse/Acse.lex
+--- ./acse_1.1.1/acse/Acse.lex	2016-02-02 23:05:13.000000000 +0100
++++ ./acse_1.1.1_cast_array/acse/Acse.lex	2017-01-31 11:58:36.275868866 +0100
+@@ -99,6 +99,8 @@
+ "read"            { return READ; }
+ "write"           { return WRITE; }
+ 
++"(bit)"				{ return REGCAST; }
++
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+                     return(NUMBER); }
+diff -Naur ./acse_1.1.1/acse/Acse.y ./acse_1.1.1_cast_array/acse/Acse.y
+--- ./acse_1.1.1/acse/Acse.y	2016-02-02 23:05:13.000000000 +0100
++++ ./acse_1.1.1_cast_array/acse/Acse.y	2017-02-01 11:17:17.541727522 +0100
+@@ -151,6 +151,7 @@
+ %left MINUS PLUS
+ %left MUL_OP DIV_OP
+ %right NOT
++%right REGCAST
+ 
+ /*=========================================================================
+                          BISON GRAMMAR
+@@ -565,6 +566,38 @@
+                                  (program, exp_r0, $2, SUB);
+                         }
+                      }
++	| REGCAST IDENTIFIER {
++		t_axe_variable *array = getVariable(program,$2);
++		if (!array->isArray){
++			  $$ = create_expression(get_symbol_location(program, $2, 0), REGISTER);
++		}
++		else{
++			int index_reg = gen_load_immediate(program, array->arraySize-1);
++			t_axe_expression index = create_expression(index_reg, REGISTER);
++
++			handle_binary_comparison(program, index, create_expression(31, IMMEDIATE), _LTEQ_);
++			t_axe_label* l = newLabel(program);
++			gen_bne_instruction(program, l, 0);
++			gen_addi_instruction(program, index_reg, REG_0, 31);
++		
++			assignLabel(program, l);
++			int result_reg = gen_load_immediate(program, 0);
++			t_axe_expression result = create_expression(result_reg, REGISTER);
++
++			t_axe_label* test = assignNewLabel(program);
++			t_axe_label* end = newLabel(program);
++			handle_binary_comparison(program, index, create_expression(0, IMMEDIATE), _LT_);
++			gen_bne_instruction(program, end, 0);
++			gen_shli_instruction(program, result_reg, result_reg, 1);
++			int v = loadArrayElement(program, $2, index);
++			t_axe_expression cmp = handle_binary_comparison(program, create_expression(v, REGISTER), create_expression(0, IMMEDIATE), _NOTEQ_);
++			gen_orb_instruction(program, result_reg, result_reg, cmp.value, CG_DIRECT_ALL);		
++			gen_subi_instruction(program, index_reg, index_reg, 1);
++			gen_bt_instruction(program, test, 0);
++			assignLabel(program, end);
++			$$ = result;
++		}
++	}
+ ;
+ 
+ %%
+diff -Naur ./acse_1.1.1/tests/castarrays/test.src ./acse_1.1.1_cast_array/tests/castarrays/test.src
+--- ./acse_1.1.1/tests/castarrays/test.src	1970-01-01 01:00:00.000000000 +0100
++++ ./acse_1.1.1_cast_array/tests/castarrays/test.src	2017-02-01 10:01:39.808663820 +0100
+@@ -0,0 +1,21 @@
++int v1[3];
++int v2[1];
++int v3[40];
++int x = 10;
++
++
++v1[0] = 0;
++v1[1] = 1;
++v1[2] = 2;
++
++v2[0] = 1;
++
++v3[31]=10;
++
++write((bit)v1);
++
++write((bit)v2);
++
++write((bit)v3);
++
++write((bit)x);
