@@ -1,0 +1,116 @@
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..1a59fcd 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -307,6 +307,45 @@ assign_statement : IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
+                /* free the memory associated with the IDENTIFIER */
+                free($1);
+             }
++            | IDENTIFIER ASSIGN IDENTIFIER LSQUARE NUMBER COLON NUMBER RSQUARE {
++                t_axe_variable *src = getVariable(program, $1);
++                t_axe_variable *trg = getVariable(program, $3);
++                if (!src->isArray || !trg->isArray) notifyError(AXE_INVALID_VARIABLE);
++
++                int s = $5;
++                int e = $7;
++                t_axe_expression tidx, sidx, value;
++                t_axe_label *start = newLabel(program);
++
++
++                    int tidx_reg = gen_load_immediate(program, 0);
++                    int sidx_reg = gen_load_immediate(program, s);
++                    tidx = create_expression(tidx_reg, REGISTER);
++                    sidx = create_expression(sidx_reg, REGISTER);
++
++                    assignLabel(program, start);
++                    int vreg = loadArrayElement(program, src->ID, sidx);
++                    value = create_expression(vreg, REGISTER);
++                    storeArrayElement(program, trg->ID, tidx, value);
++
++                    gen_addi_instruction(program, sidx_reg, sidx_reg, 1);
++                    gen_addi_instruction(program, tidx_reg, tidx_reg, 1);
++
++                if (s > e) {
++                    handle_binary_comparison(program, sidx,
++                                            create_expression(src->arraySize, IMMEDIATE),
++                                            _EQ_);
++                    t_axe_label * skip = newLabel(program);
++                    gen_bne_instruction(program, skip, 0);
++                    gen_add_instruction(program, sidx_reg, REG_0, REG_0, CG_DIRECT_ALL);
++                    assignLabel(program, skip);
++                }
++
++                    handle_binary_comparison(program, sidx,
++                                            create_expression(e+1, IMMEDIATE),
++                                            _EQ_);
++                    gen_bne_instruction(program, start, 0);
++            }
+ ;
+             
+ if_statement   : if_stmt
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..e09802f 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,8 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc \
++vectrange
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/vectrange/vectrange.src b/tests/vectrange/vectrange.src
+new file mode 100644
+index 0000000..02fe11c
+--- /dev/null
++++ b/tests/vectrange/vectrange.src
+@@ -0,0 +1,46 @@
++int a[10];
++int b[5];
++
++a[0] = 0;
++a[1] = 1;
++a[2] = 2;
++a[3] = 3;
++a[4] = 4;
++a[5] = 5;
++a[6] = 6;
++a[7] = 7;
++a[8] = 8;
++a[9] = 9;
++//a=[0,1,2,3,4,5,6,7,8,9]
++
++b = a[0:4]; //b = [0,1,2,3,4]
++write("b = a[0:4]");
++write(b[0]);
++write(b[1]);
++write(b[2]);
++write(b[3]);
++write(b[4]);
++
++b = a[9:2]; //b = [9,0,1,2,4]
++write("b = a[9:2]");
++write(b[0]);
++write(b[1]);
++write(b[2]);
++write(b[3]);
++write(b[4]);
++
++b = b[3:1]; //b = [2,4,9,0,4]
++write("b = b[3:1]");
++write(b[0]);
++write(b[1]);
++write(b[2]);
++write(b[3]);
++write(b[4]);
++
++b = a[6:6]; //b = [6,4,9,0,4]
++write("b = a[6:6]");
++write(b[0]);
++write(b[1]);
++write(b[2]);
++write(b[3]);
++write(b[4]);

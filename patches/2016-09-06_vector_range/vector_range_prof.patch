@@ -1,0 +1,111 @@
+diff -Naur ./acse_1.1.1/acse/Acse.y ./acse_1.1.1_vectorrange_noexp/acse/Acse.y
+--- ./acse_1.1.1/acse/Acse.y	2016-02-02 23:05:13.000000000 +0100
++++ ./acse_1.1.1_vectorrange_noexp/acse/Acse.y	2016-08-30 12:40:29.361169069 +0200
+@@ -36,7 +36,8 @@
+ #  include "axe_debug.h"
+ #endif
+ 
+-
++void vect_copy(char*, char*);
++void rotating_vect_copy(char*, char*, int, int);
+ 
+ /* global variables */
+ int line_num;        /* this variable will keep track of the
+@@ -256,7 +257,42 @@
+                      | write_statement { /* does nothing */ }
+ ;
+ 
+-assign_statement : IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
++assign_statement : 
++    IDENTIFIER ASSIGN IDENTIFIER LSQUARE NUMBER COLON NUMBER RSQUARE {
++					char* src_vect_id;
++
++					t_axe_variable* src_var = getVariable(program, $3);
++					t_axe_variable* dest_var = getVariable(program, $1);
++
++					if (!src_var->isArray || !dest_var->isArray) notifyError(AXE_SYNTAX_ERROR);
++				
++					if ($5<0 || $5>=src_var->arraySize) notifyError(AXE_UNKNOWN_ERROR);
++
++					if (strcmp($1, $3) != 0){
++						src_vect_id = $3;
++					}
++					else{
++							char* copy_var_id = (char*) malloc((strlen($3)+4)*sizeof(char));
++							strcpy(copy_var_id, $1);
++							strcat(copy_var_id, "axe");
++
++							t_axe_variable* copy_var = getVariable(program, copy_var_id);
++							
++							if (copy_var == NULL){
++		                  set_new_variables(program, INTEGER_TYPE, addElement(NULL, alloc_declaration(copy_var_id, 1, src_var->arraySize, 0), -1));
++							}
++
++							vect_copy(copy_var_id, $3);
++
++							src_vect_id = copy_var_id;
++					}
++
++					rotating_vect_copy($1, src_vect_id, $5, $7);
++
++					free($1);
++					free($3);
++   			}
++				| IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
+             {
+                /* Notify to `program' that the value $6
+                 * have to be assigned to the location
+@@ -664,3 +700,53 @@
+    
+    return 0;
+ }
++
++
++void vect_copy(char* dest_var_id, char* src_var_id){
++	t_axe_variable* src_var = getVariable(program, src_var_id);
++
++	int i_reg = gen_load_immediate(program, 0);
++	t_axe_label* l_condition = assignNewLabel(program);
++	t_axe_label* l_end = newLabel(program);
++	handle_binary_comparison(program, create_expression(i_reg, REGISTER), create_expression(src_var->arraySize, IMMEDIATE), _EQ_);
++	gen_bne_instruction(program, l_end, 0);
++	int reg = loadArrayElement(program, src_var_id, create_expression(i_reg, REGISTER));
++	storeArrayElement(program, dest_var_id, create_expression(i_reg, REGISTER), create_expression(reg, REGISTER));
++	gen_addi_instruction(program, i_reg, i_reg, 1);
++	gen_bt_instruction(program, l_condition, 0);
++	assignLabel(program, l_end);
++
++	return;
++}
++
++void rotating_vect_copy(char* dest_var_id, char* src_var_id, int i_start, int i_end){
++	t_axe_variable* src_var = getVariable(program, src_var_id);
++
++	int i_start_reg = gen_load_immediate(program, i_start);
++	int i_end_reg = gen_load_immediate(program, i_end);
++	int i_dest_reg = gen_load_immediate(program, 0);
++
++	t_axe_label* l_condition = assignNewLabel(program);
++	t_axe_label* l_end = newLabel(program);
++	handle_binary_comparison(program, create_expression(i_start_reg, REGISTER), create_expression(i_end_reg, REGISTER), _EQ_);
++	gen_bne_instruction(program, l_end, 0);
++	int r = loadArrayElement(program, src_var_id, create_expression(i_start_reg, REGISTER));
++	storeArrayElement(program, dest_var_id, create_expression(i_dest_reg, REGISTER), create_expression(r, REGISTER));
++
++	gen_addi_instruction(program, i_start_reg, i_start_reg, 1);
++	t_axe_expression e = handle_binary_comparison(program, create_expression(i_start_reg, REGISTER), create_expression(src_var->arraySize-1, IMMEDIATE), _GT_);
++	t_axe_label* skip_reset = newLabel(program);
++	gen_beq_instruction(program, skip_reset, 0);
++	gen_addi_instruction(program, i_start_reg, REG_0, 0);
++	assignLabel(program, skip_reset);
++	gen_addi_instruction(program, i_dest_reg, i_dest_reg, 1);
++	
++	gen_bt_instruction(program, l_condition, 0);
++	assignLabel(program, l_end);
++
++	r = loadArrayElement(program, src_var_id, create_expression(i_start_reg, REGISTER));
++	storeArrayElement(program, dest_var_id, create_expression(i_dest_reg, REGISTER), create_expression(r, REGISTER));
++
++	return;
++}
++
