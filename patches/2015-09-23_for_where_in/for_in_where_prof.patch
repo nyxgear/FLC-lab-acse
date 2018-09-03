@@ -1,0 +1,185 @@
+From bf2379cff20c6f0f8b9304e722a680ef0950e971 Mon Sep 17 00:00:00 2001
+From: Michele Scandale <michele.scandale@polimi.it>
+Date: Mon, 21 Sep 2015 20:26:19 +0200
+Subject: [PATCH] LAB 23/09/2015
+
+---
+ acse/Acse.lex     |  2 ++
+ acse/Acse.y       | 89 ++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ acse/axe_struct.h | 11 +++++++
+ 3 files changed, 101 insertions(+), 1 deletion(-)
+
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index f4ad42a..44cc8e1 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -98,6 +98,8 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"where"           { return WHERE; }
++"in"              { return IN; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 4ead429..bb6ad8a 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -106,6 +106,7 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
++   t_for_where_statement for_where_stmt;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -118,10 +119,10 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ %token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ
+ %token ANDAND OROR
+ %token COMMA
+-%token FOR
+ %token RETURN
+ %token READ
+ %token WRITE
++%token WHERE IN
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -130,11 +131,13 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ %token <intval> TYPE
+ %token <svalue> IDENTIFIER
+ %token <intval> NUMBER
++%token <for_where_stmt> FOR
+ 
+ %type <expr> exp
+ %type <decl> declaration
+ %type <list> declaration_list
+ %type <label> if_stmt
++%type <expr> where_cond
+ 
+ /*=========================================================================
+                           OPERATOR PRECEDENCES
+@@ -251,6 +254,7 @@ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
+             | return_statement SEMI      { /* does nothing */ }
++            | for_where_statement        { /* does nothing */ }
+ ;
+ 
+ read_write_statement : read_statement  { /* does nothing */ }
+@@ -407,6 +411,89 @@ do_while_statement  : DO
+                      }
+ ;
+ 
++where_cond : WHERE exp { $$ = $2; }
++           | { $$ = create_expression(1, IMMEDIATE); }
++;
++
++for_where_statement : FOR LPAR IDENTIFIER IN IDENTIFIER
++                      {
++                        t_axe_variable *var_elem = getVariable(program, $3);
++                        t_axe_variable *var_arr = getVariable(program, $5);
++                        if (var_elem->isArray || !var_arr->isArray)
++                           exit(-1);
++
++                        $1.cnt_update_label = NULL;
++                        $1.end_label = NULL;
++
++                        /* We need to skip the evaluation of the WHERE condition */
++                        $1.init_label = newLabel(program);
++                        gen_bt_instruction(program, $1.init_label, 0);
++
++                        /* WHERE condition evaluation */
++                        $1.cond_label = assignNewLabel(program);
++                      }
++                      where_cond RPAR
++                      {
++                        if ($7.expression_type != IMMEDIATE) {
++                           $1.cnt_update_label = newLabel(program);
++                           gen_andb_instruction(program, $7.value, $7.value,
++                                                $7.value, CG_DIRECT_ALL);
++                           /* Skip the loop body if the condition is false */
++                           gen_beq_instruction(program, $1.cnt_update_label, 0);
++                        }
++                        /* Jump to the loop body */
++                        $1.body_label = newLabel(program);
++                        gen_bt_instruction(program, $1.body_label, 0);
++
++                        /* Loop initialization */
++                        assignLabel(program, $1.init_label);
++                        if ($7.expression_type == IMMEDIATE && $7.value == 0) {
++                           /* Jump to the END whenever the condition is always false */
++                           $1.end_label = newLabel(program);
++                           gen_bt_instruction(program, $1.end_label, 0);
++                        }
++
++                        /* Initialize induction variable */
++                        $1.cnt_reg = gen_load_immediate(program, 0);
++                        t_axe_expression cnt_exp = create_expression($1.cnt_reg, REGISTER);
++
++                        /* Loop begin */
++                        $1.begin_label = assignNewLabel(program);
++                        int elem_reg = get_symbol_location(program, $3, 0);
++                        int tmp_reg = loadArrayElement(program, $5, cnt_exp);
++                        gen_orbi_instruction(program, elem_reg, tmp_reg, 0);
++
++                        /* Jump to condition evaluation */
++                        gen_bt_instruction(program, $1.cond_label, 0);
++
++                        /* Loop body */
++                        assignLabel(program, $1.body_label);
++                      }
++                      code_block
++                      {
++                        /* Loop induction variable update */
++                        if ($1.cnt_update_label)
++                           assignLabel(program, $1.cnt_update_label);
++
++                        t_axe_expression cnt_exp = create_expression($1.cnt_reg, REGISTER);
++                        int elem_reg = get_symbol_location(program, $3, 0);
++                        t_axe_expression elem_exp = create_expression(elem_reg, REGISTER);
++                        storeArrayElement(program, $5, cnt_exp, elem_exp);
++
++                        gen_addi_instruction(program, $1.cnt_reg, $1.cnt_reg, 1);
++
++                        t_axe_variable *var_arr = getVariable(program, $5);
++                        t_axe_expression arr_size = create_expression(var_arr->arraySize, IMMEDIATE);
++                        handle_bin_numeric_op(program, cnt_exp, arr_size, SUB);
++                        /* New iteration if the counter is < arraySize */
++                        gen_blt_instruction(program, $1.begin_label, 0);
++
++                        /* END of the loop */
++                        if ($1.end_label)
++                           assignLabel(program, $1.end_label);
++                      }
++;
++
+ return_statement : RETURN
+             {
+                /* insert an HALT instruction */
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index f2fce55..3fc3b44 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,17 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_for_where_statement
++{
++   t_axe_label *init_label;
++   t_axe_label *cond_label;
++   t_axe_label *begin_label;
++   t_axe_label *body_label;
++   t_axe_label *cnt_update_label;
++   t_axe_label *end_label;
++   int cnt_reg;
++} t_for_where_statement;
++
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+-- 
+2.5.2
+

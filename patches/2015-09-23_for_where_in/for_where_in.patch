@@ -1,0 +1,162 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..c0bf195 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,8 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"in"              { return IN; }
++"where"           { return WHERE; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..1c0bc64 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -108,7 +108,8 @@ extern int yyerror(const char* errmsg);
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
+-} 
++   t_axe_where_opt where_opt;
++}
+ /*=========================================================================
+                                TOKENS 
+ =========================================================================*/
+@@ -120,11 +121,14 @@ extern int yyerror(const char* errmsg);
+ %token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ
+ %token ANDAND OROR
+ %token COMMA
+-%token FOR
+ %token RETURN
+ %token READ
+ %token WRITE
+ 
++%token <label> FOR
++%token <intval> IN
++%token WHERE
++
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+@@ -137,6 +141,7 @@ extern int yyerror(const char* errmsg);
+ %type <decl> declaration
+ %type <list> declaration_list
+ %type <label> if_stmt
++%type <where_opt> where_optional
+ 
+ /*=========================================================================
+                           OPERATOR PRECEDENCES
+@@ -253,6 +258,7 @@ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
+             | return_statement SEMI      { /* does nothing */ }
++            | for_in_where_statement     { /* does nothing */ }
+ ;
+ 
+ read_write_statement : read_statement  { /* does nothing */ }
+@@ -418,6 +424,54 @@ return_statement : RETURN
+             }
+ ;
+ 
++for_in_where_statement: FOR LPAR IDENTIFIER IN IDENTIFIER where_optional
++            {
++                t_axe_variable *el = getVariable(program, $3);
++                t_axe_variable *arr = getVariable(program, $5);
++                if (el->isArray || !arr->isArray)
++                    notifyError(AXE_INVALID_VARIABLE);
++                int idx_reg = gen_load_immediate(program, 0);
++                $4 = idx_reg;
++                int el_reg = get_symbol_location(program, el->ID, 0);
++                $1 = assignNewLabel(program);
++                int av_reg = loadArrayElement(program, arr->ID,
++                                              create_expression(idx_reg, REGISTER));
++                gen_addi_instruction(program, el_reg, av_reg, 0);
++            }
++            RPAR code_block
++            {
++                t_axe_variable *arr = getVariable(program, $5);
++                t_axe_label *loop_end;
++                if ($6.empty)
++                    loop_end = newLabel(program);
++                else
++                    loop_end = $6.label;
++                assignLabel(program, loop_end);
++                gen_addi_instruction(program, $4, $4, 1);
++                handle_binary_comparison(program,
++                                         create_expression($4, REGISTER),
++                                         create_expression(arr->arraySize, IMMEDIATE),
++                                         _GTEQ_);
++                gen_beq_instruction(program, $1, 0);
++            }
++;
++
++where_optional: WHERE exp
++              {
++                if ($2.expression_type == IMMEDIATE)
++                    gen_load_immediate(program, $2.value);
++                else
++                    gen_andb_instruction(program, $2.value, $2.value, $2.value, CG_DIRECT_ALL);
++                t_axe_label * loop_end = newLabel(program);
++                gen_beq_instruction(program, loop_end, 0);
++                $$.empty = 0;
++                $$.label = loop_end;
++              }
++              |
++              {
++                $$.empty = 1;
++              }
++
+ read_statement : READ LPAR IDENTIFIER RPAR 
+             {
+                int location;
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index 47663cc..bc00d43 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,13 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_axe_where_opt
++{
++    t_axe_label *label;
++    int empty;
++} t_axe_where_opt;
++
++
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..eaf3a10 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,8 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc \
++for_in_where
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/for_in_where/for_in_where.src b/tests/for_in_where/for_in_where.src
+new file mode 100644
+index 0000000..85f182b
+--- /dev/null
++++ b/tests/for_in_where/for_in_where.src
+@@ -0,0 +1,10 @@
++int elem, v[10];
++
++for (elem in v where (elem & 29) != 0) {
++	write(elem ^ 29);
++}
++
++for (elem in v) {
++	write(elem - 29);
++}
++
