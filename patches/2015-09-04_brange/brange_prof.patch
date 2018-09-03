@@ -1,0 +1,130 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index f4ad42a..b36d8eb 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -98,6 +98,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"brange"          { return BRANGE; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 4ead429..1706805 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -122,6 +122,7 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ %token RETURN
+ %token READ
+ %token WRITE
++%token BRANGE
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -566,6 +567,9 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                                  (program, exp_r0, $2, SUB);
+                         }
+                      }
++   | BRANGE LPAR exp COMMA exp COMMA exp RPAR {
++       $$ = handle_brange_op(program, $3, $5, $7);
++     }
+ ;
+ 
+ %%
+diff --git a/acse/axe_expressions.c b/acse/axe_expressions.c
+index a30b638..0049cfb 100644
+--- a/acse/axe_expressions.c
++++ b/acse/axe_expressions.c
+@@ -296,3 +296,74 @@ t_axe_expression handle_binary_comparison (t_program_infos *program
+    /* return the new expression */
+    return create_expression (output_register, REGISTER);
+ }
++
++t_axe_expression handle_brange_op(t_program_infos *program, t_axe_expression op,
++                                  t_axe_expression lo, t_axe_expression hi) {
++  int is_lo_const = lo.expression_type == IMMEDIATE;
++  int is_hi_const = hi.expression_type == IMMEDIATE;
++
++  /* Fold to zero if the range is proven invalid */
++  if ((is_lo_const && lo.value < 0) || (is_hi_const && hi.value > 31) ||
++      (is_lo_const && is_hi_const && lo.value > hi.value))
++    return create_expression(0, IMMEDIATE);
++
++  t_axe_label *invalid_label = NULL;
++
++  /* Test if we need to generate runtime checks */
++  if (!is_lo_const || !is_hi_const) {
++    invalid_label = newLabel(program);
++
++    t_axe_expression cmp;
++
++    if (!is_lo_const) {
++      /* if (lo < 0) goto invalid; */
++      t_axe_expression min = create_expression(0, IMMEDIATE);
++      cmp = handle_binary_comparison(program, lo, min, _LT_);
++      gen_bne_instruction(program, invalid_label, 0);
++    }
++
++    if (!is_hi_const) {
++      /* if (hi > 31) goto invalid; */
++      t_axe_expression max = create_expression(31, IMMEDIATE);
++      cmp = handle_binary_comparison(program, hi, max, _GT_);
++      gen_bne_instruction(program, invalid_label, 0);
++    }
++
++    /* if (lo > hi) goto invalid; */
++    cmp = handle_binary_comparison(program, lo, hi, _GT_);
++    gen_bne_instruction(program, invalid_label, 0);
++  }
++
++  /*
++    Do the computation for valid range:
++        output = (op >> lo) & ((1 << (hi - lo + 1)) - 1)
++  */
++  t_axe_expression one = create_expression(1, IMMEDIATE);
++
++  t_axe_expression delta = handle_bin_numeric_op(program, hi, lo, SUB);
++  t_axe_expression num_bits = handle_bin_numeric_op(program, delta, one, ADD);
++
++  t_axe_expression mask = handle_bin_numeric_op(program, one, num_bits, SHL);
++  mask = handle_bin_numeric_op(program, mask, one, SUB);
++
++  t_axe_expression output = handle_bin_numeric_op(program, op, lo, SHR);
++  output = handle_bin_numeric_op(program, output, mask, ANDB);
++
++  /* Handle special case with a known range */
++  if (!invalid_label)
++    return output;
++
++  /* We need a target register for the result */
++  int res_reg = getNewRegister(program);
++  gen_orbi_instruction(program, res_reg, output.value, 0);
++
++  t_axe_label *end_label = newLabel(program);
++  gen_bt_instruction(program, end_label, 0);
++
++  assignLabel(program, invalid_label);
++
++  gen_orbi_instruction(program, res_reg, REG_0, 0);
++  assignLabel(program, end_label);
++
++  return create_expression(res_reg, REGISTER);
++}
+diff --git a/acse/axe_expressions.h b/acse/axe_expressions.h
+index 97a91b3..04afcaf 100644
+--- a/acse/axe_expressions.h
++++ b/acse/axe_expressions.h
+@@ -50,4 +50,9 @@ extern t_axe_expression handle_bin_numeric_op (t_program_infos *program
+ extern t_axe_expression handle_binary_comparison (t_program_infos *program
+          , t_axe_expression exp1, t_axe_expression exp2, int condition);
+ 
++
++extern t_axe_expression handle_brange_op(t_program_infos *program,
++                                         t_axe_expression op,
++                                         t_axe_expression lo,
++                                         t_axe_expression hi);
+ #endif
+-- 
+2.5.1
+
