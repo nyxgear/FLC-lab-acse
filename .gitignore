@@ -1,3 +1,7 @@
+# Flex and Bison
+*.tab.h
+*.tab.c
+*lex.yy.c
 
 # Created by https://www.gitignore.io/api/c,assembler
 
