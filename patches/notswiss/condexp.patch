@@ -1,0 +1,65 @@
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..1b584d6 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -154,7 +154,7 @@ extern int yyerror(const char* errmsg);
+ %left MINUS PLUS
+ %left MUL_OP DIV_OP
+ %right NOT
+-
++%left IF ELSE
+ /*=========================================================================
+                          BISON GRAMMAR
+ =========================================================================*/
+@@ -570,6 +570,25 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                                  (program, exp_r0, $2, SUB);
+                         }
+                      }
++   | exp IF exp ELSE exp
++   {
++      if ($3.expression_type == IMMEDIATE)
++        $$ = $3.value ? $1 : $5;
++      else {
++        t_axe_expression zero = create_expression(0, IMMEDIATE);
++        /* cmp == 1 if $3 is false, else is 0. By subtracting one we then have our mask */
++        t_axe_expression cmp = handle_binary_comparison(program, $3, zero, _EQ_);
++        t_axe_expression one = create_expression(1, IMMEDIATE);
++        /* mask = $3 ? 1 : 0, nmask = not mask */
++        t_axe_expression mask = handle_bin_numeric_op(program, cmp, one, SUB);
++        int r = getNewRegister(program);
++        gen_notb_instruction(program, r, mask.value);
++        t_axe_expression nmask = create_expression(r, REGISTER);
++        t_axe_expression left = handle_bin_numeric_op(program, $1, mask, ANDB);
++        t_axe_expression right = handle_bin_numeric_op(program, $5, nmask, ANDB);
++        $$ = handle_bin_numeric_op(program, left, right, ORB);
++      }
++   }
+ ;
+ 
+ %%
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..74b6fd8 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc condexp
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/condexp/test.src b/tests/condexp/test.src
+new file mode 100644
+index 0000000..f6ade33
+--- /dev/null
++++ b/tests/condexp/test.src
+@@ -0,0 +1,7 @@
++int x;
++int y;
++read(x);
++
++y = 100 if x > 0 else 42;
++
++write(y);
