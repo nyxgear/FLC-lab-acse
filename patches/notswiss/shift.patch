@@ -1,0 +1,162 @@
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..53128a4 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -246,6 +246,7 @@ statements  : statements statement       { /* does nothing */ }
+ statement   : assign_statement SEMI      { /* does nothing */ }
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
++            | array_shift_statement SEMI {}
+             | SEMI            { gen_nop_instruction(program); }
+ ;
+ 
+@@ -457,6 +458,103 @@ write_statement : WRITE LPAR exp RPAR
+             }
+ ;
+ 
++array_shift_statement : array_shiftl_statement | array_shiftr_statement;
++
++array_shiftl_statement : IDENTIFIER SHL_OP exp
++                       {
++                          t_axe_variable* id = getVariable(program, $1);
++                          int l_r = getNewRegister(program);
++                          int r_r = getNewRegister(program);
++                          int size_r = getNewRegister(program);
++                          int temp_r = getNewRegister(program);
++                          t_axe_label *shift_l, *zero_l, *out_l;
++                          t_axe_expression temp_e, l_e, r_e;
++
++                          if (!id->isArray) exit(-1);
++                          int array_size = id->arraySize;
++                          /* Load initial variables (l_r = 0, r_r = shift_size, size_r = array_size) */
++                          temp_e = create_expression(array_size, IMMEDIATE);
++                          gen_addi_instruction(program, size_r, REG_0, temp_e.value);
++                          gen_addi_instruction(program, l_r, REG_0, REG_0);
++                          if ($3.expression_type == IMMEDIATE)
++                            gen_addi_instruction(program, r_r, REG_0, $3.value);
++                          else
++                            gen_add_instruction(program, r_r, REG_0, $3.value, CG_DIRECT_ALL);
++                          /* Shift values to the left: at each iteration perform arr[l_r] = arr[r_r], until size_r - r_r > 0 */
++                          shift_l = assignNewLabel(program);
++                          zero_l = newLabel(program);
++                          out_l = newLabel(program);
++                          gen_sub_instruction(program, temp_r, size_r, r_r, CG_DIRECT_ALL);
++                          gen_ble_instruction(program, zero_l, 0);
++                          l_e = create_expression(l_r, REGISTER);
++                          r_e = create_expression(r_r, REGISTER);
++                          temp_r = loadArrayElement(program, $1, r_e);
++                          temp_e = create_expression(temp_r, REGISTER);
++                          storeArrayElement(program, $1, l_e, temp_e);
++                          gen_addi_instruction(program, l_r, l_r, 1);
++                          gen_addi_instruction(program, r_r, r_r, 1);
++                          gen_bt_instruction(program, shift_l, 0);
++                          assignLabel(program, zero_l);
++                          /* Fills the rest of the array with zeroes, until size_r - l_r > 0 */
++                          gen_sub_instruction(program, temp_r, size_r, l_r, CG_DIRECT_ALL);
++                          gen_ble_instruction(program, out_l, 0);
++                          l_e = create_expression(l_r, REGISTER);
++                          temp_e = create_expression(0, IMMEDIATE);
++                          storeArrayElement(program, $1, l_e, temp_e);
++                          gen_addi_instruction(program, l_r, l_r, 1);
++                          gen_bt_instruction(program, zero_l, 0);
++                          assignLabel(program, out_l);
++                       }
++;
++
++array_shiftr_statement : IDENTIFIER SHR_OP exp
++                       {
++                          t_axe_variable* id = getVariable(program, $1);
++                          int l_r = getNewRegister(program);
++                          int r_r = getNewRegister(program);
++                          int size_r = getNewRegister(program);
++                          int temp_r = getNewRegister(program);
++                          t_axe_label *shift_l, *zero_l, *out_l;
++                          t_axe_expression temp_e, l_e, r_e;
++
++                          if (!id->isArray) exit(-1);
++                          int array_size = id->arraySize;
++                          /* Load initial variables (l_r = array_size - shift_size, r_r = array_size, size_r = array_size) */
++                          temp_e = create_expression(array_size, IMMEDIATE);
++                          gen_addi_instruction(program, size_r, REG_0, temp_e.value);
++                          gen_addi_instruction(program, r_r, REG_0, temp_e.value);
++                          if ($3.expression_type == IMMEDIATE)
++                            gen_subi_instruction(program, l_r, temp_e.value, $3.value);
++                          else
++                            gen_sub_instruction(program, l_r, temp_e.value, $3.value, CG_DIRECT_ALL);
++                          /* Shift values to the left: at each iteration perform arr[l_r] = arr[r_r], until l_r >= 0 */
++                          shift_l = assignNewLabel(program);
++                          zero_l = newLabel(program);
++                          out_l = newLabel(program);
++                          gen_sub_instruction(program, temp_r, l_r, REG_0, CG_DIRECT_ALL);
++                          gen_blt_instruction(program, zero_l, 0);
++                          l_e = create_expression(l_r, REGISTER);
++                          r_e = create_expression(r_r, REGISTER);
++                          temp_r = loadArrayElement(program, $1, l_e);
++                          temp_e = create_expression(temp_r, REGISTER);
++                          storeArrayElement(program, $1, r_e, temp_e);
++                          gen_subi_instruction(program, l_r, l_r, 1);
++                          gen_subi_instruction(program, r_r, r_r, 1);
++                          gen_bt_instruction(program, shift_l, 0);
++                          assignLabel(program, zero_l);
++                          /* Fills the rest of the array with zeroes, until r_r >= 0 */
++                          gen_sub_instruction(program, temp_r, r_r, REG_0, CG_DIRECT_ALL);
++                          gen_blt_instruction(program, out_l, 0);
++                          r_e = create_expression(r_r, REGISTER);
++                          temp_e = create_expression(0, IMMEDIATE);
++                          storeArrayElement(program, $1, r_e, temp_e);
++                          gen_subi_instruction(program, r_r, r_r, 1);
++                          gen_bt_instruction(program, zero_l, 0);
++                          assignLabel(program, out_l);
++                       }
++;
++
++
+ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    | IDENTIFIER  {
+                      int location;
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..18ffa95 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=shift
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/shift/test.src b/tests/shift/test.src
+new file mode 100644
+index 0000000..3025c58
+--- /dev/null
++++ b/tests/shift/test.src
+@@ -0,0 +1,27 @@
++int i = 0;
++int a[5];
++
++while (i < 5) {
++  a[i] = i;
++  i = i + 1;
++}
++
++
++i = 0;
++a << 2;
++
++while (i < 5) {
++  write(a[i]);
++  i = i + 1;
++}
++
++a >> 4;
++
++i = 0;
++while (i < 5) {
++  write(a[i]);
++  i = i + 1;
++}
++
++a << 10;
++a >> 10;
