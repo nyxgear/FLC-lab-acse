@@ -1,0 +1,120 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..9f5f4a3 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -87,6 +87,8 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "&&"              { return ANDAND; }
+ "||"              { return OROR; }
+ ","               { return COMMA; }
++"$"               { return DOLLAR; }
++"@"               { return AT; }
+ 
+ "do"              { return DO; }
+ "else"            { return ELSE; }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..362c308 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -16,6 +16,7 @@
+ 
+ #include <stdio.h>       
+ #include <stdlib.h>
++#include <math.h>
+ #include <assert.h>
+ #include "axe_struct.h"
+ #include "axe_engine.h"
+@@ -119,6 +120,7 @@ extern int yyerror(const char* errmsg);
+ %token AND_OP OR_OP NOT_OP
+ %token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ
+ %token ANDAND OROR
++%token AT DOLLAR
+ %token COMMA
+ %token FOR
+ %token RETURN
+@@ -153,6 +155,7 @@ extern int yyerror(const char* errmsg);
+ %left SHL_OP SHR_OP
+ %left MINUS PLUS
+ %left MUL_OP DIV_OP
++%left AT DOLLAR
+ %right NOT
+ 
+ /*=========================================================================
+@@ -484,7 +487,41 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                      /* free the memory associated with the IDENTIFIER */
+                      free($1);
+    }
+-   | NOT_OP NUMBER   {  if ($2 == 0)
++   | exp DOLLAR exp AT exp 
++  {
++    t_axe_expression zero = create_expression(0, IMMEDIATE);
++    t_axe_expression one = create_expression(1, IMMEDIATE);
++    t_axe_expression ones = handle_bin_numeric_op(program, zero, one, SUB);
++    t_axe_expression mask, nmask;
++    t_axe_label *out = newLabel(program);
++    if ($5.expression_type == IMMEDIATE) {
++      mask = create_expression(pow(2, $5.value) - 1, IMMEDIATE);
++    } else { 
++      int i = getNewRegister(program);
++      int temp = getNewRegister(program);
++      mask = create_expression(0, IMMEDIATE);
++      t_axe_expression limit = create_expression(32, IMMEDIATE);
++      t_axe_expression two = create_expression(2, IMMEDIATE);
++      gen_add_instruction(program, i, REG_0, $5.value, CG_DIRECT_ALL);
++      t_axe_label *loop = assignNewLabel(program);
++      gen_sub_instruction(program, temp, limit.value, i, CG_DIRECT_ALL);
++      gen_ble_instruction(program, out, 0);
++      mask = handle_bin_numeric_op(program, mask, one, ADD);
++      mask = handle_bin_numeric_op(program, mask, two, MUL);
++      mask = handle_bin_numeric_op(program, mask, one, SUB);
++      gen_addi_instruction(program, i, i, 1);
++      gen_bt_instruction(program, loop, 0);
++    }
++    /* Calculates negative of mask and returns masked result*/
++    int r = getNewRegister(program);
++    assignLabel(program, out);
++    gen_notb_instruction(program, r, mask.value);
++    nmask = create_expression(r, REGISTER);
++    t_axe_expression a = handle_bin_numeric_op(program, $1, nmask, ANDB);
++    t_axe_expression b = handle_bin_numeric_op(program, $3, mask, ANDB);
++    $$ = handle_bin_numeric_op(program, a, b, ORB);
++  } 
++  | NOT_OP NUMBER   {  if ($2 == 0)
+                            $$ = create_expression (1, IMMEDIATE);
+                         else
+                            $$ = create_expression (0, IMMEDIATE);
+diff --git a/acse/Makefile b/acse/Makefile
+index 58a06ba..2c3d617 100644
+--- a/acse/Makefile
++++ b/acse/Makefile
+@@ -8,7 +8,7 @@ cfiles = $(filter-out $(objects), $(wildcard *.c))
+ all: $(project)
+ 
+ $(project) : $(objects) $(cfiles) $(hfiles)
+-	gcc -o $@ $(objects) $(cfiles)
++	gcc -o $@ $(objects) $(cfiles) -lm
+ 
+ Acse.tab.c : Acse.y
+ 	bison -d $<
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..e8a7c6c 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc splice
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/splice/splice.src b/tests/splice/splice.src
+new file mode 100644
+index 0000000..3d2ec2d
+--- /dev/null
++++ b/tests/splice/splice.src
+@@ -0,0 +1,4 @@
++int a;
++a = 5 $ 2 @ 3;
++
++write(a);
