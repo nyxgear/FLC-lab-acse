@@ -1,0 +1,114 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..06fd4b7 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,10 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"reduce"          { return REDUCE; }
++"into"            { return INTO; }
++"as"              { return AS; }
++"on"              { return ON; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..65b02ad 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -124,7 +124,10 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
++%token AS ON
+ 
++%token <label> REDUCE
++%token <label> INTO
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+@@ -252,6 +255,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
++            | reduce_statement SEMI {}
+             | return_statement SEMI      { /* does nothing */ }
+ ;
+ 
+@@ -411,6 +415,41 @@ do_while_statement  : DO
+                      }
+ ;
+ 
++reduce_statement : REDUCE IDENTIFIER INTO IDENTIFIER AS LSQUARE LSQUARE
++                 {
++                    $1 = newLabel(program);
++                    gen_bt_instruction(program, $1, 0); /* Jump to start */
++                    $3 = assignNewLabel(program);  /* Exp */
++                 } exp RSQUARE RSQUARE ON IDENTIFIER
++                 {
++                    t_axe_variable *e = getVariable(program, $2);
++                    t_axe_variable *r = getVariable(program, $4);
++                    t_axe_variable *v = getVariable(program, $13);
++                    if (e->isArray || r->isArray || !v->isArray) notifyError(AXE_INVALID_VARIABLE);
++                    t_axe_label *inc = newLabel(program);
++                    gen_bt_instruction(program, inc, 0);  /* Jump to inc */
++                    assignLabel(program, $1);  /* Start */
++                    int i = gen_load_immediate(program, 0);
++                    t_axe_expression i_exp = create_expression(i, REGISTER);
++                    int temp = getNewRegister(program);
++                    int e_r = get_symbol_location(program, $2, 0);
++                    int r_r = get_symbol_location(program, $4, 0);
++                    t_axe_label *loop = assignNewLabel(program);  /* Loop */
++                    gen_subi_instruction(program, temp, i, v->arraySize);
++                    t_axe_label *end = newLabel(program);
++                    gen_bge_instruction(program, end, 0);
++                    temp = loadArrayElement(program, $13, i_exp);
++                    gen_addi_instruction(program, e_r, temp, 0);  /* e = v[i] */
++                    gen_bt_instruction(program, $3, 0);  /* Jump to exp */
++                    assignLabel(program, inc); /* Inc */
++                    gen_addi_instruction(program, r_r, $9.value, 0);
++                    gen_addi_instruction(program, i, i, 1);
++                    gen_bt_instruction(program, loop, 0);  /* Jump to loop */
++                    assignLabel(program, end);
++                    free($2);
++                    free($4);
++                    free($13);
++                 }
+ return_statement : RETURN
+             {
+                /* insert an HALT instruction */
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..1b14f4a 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc reduce
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/reduce/reduce.src b/tests/reduce/reduce.src
+new file mode 100644
+index 0000000..25bde6a
+--- /dev/null
++++ b/tests/reduce/reduce.src
+@@ -0,0 +1,15 @@
++int vett[100];
++
++int elem, t, sum;
++
++t = 1;
++sum = 0;
++
++// vett = {2, 6, 13}
++vett[0] = 2;
++vett[1] = 6;
++vett[2] = 13;
++reduce elem into sum as [[ sum + t * elem ]] on vett;
++
++// sum = 21
++write(sum);
