@@ -1,0 +1,113 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..bec2f85 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,8 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"eval"            { return EVAL; }
++"unless"          { return UNLESS; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..6cc9ff0 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -93,6 +93,9 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
++struct {
++  t_axe_label *start, *body, *end;
++} eval_unless;
+ %}
+ %expect 1
+ 
+@@ -125,6 +128,8 @@ extern int yyerror(const char* errmsg);
+ %token READ
+ %token WRITE
+ 
++%token EVAL
++%token UNLESS
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+@@ -252,6 +257,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
++            | eval_unless_statement SEMI {}
+             | return_statement SEMI      { /* does nothing */ }
+ ;
+ 
+@@ -411,6 +417,31 @@ do_while_statement  : DO
+                      }
+ ;
+ 
++eval_unless_statement : EVAL
++                      {
++                         eval_unless.start = newLabel(program);
++                         gen_bt_instruction(program, eval_unless.start, 0);
++                         eval_unless.body = assignNewLabel(program);
++                      } code_block 
++                      {
++                         eval_unless.end = newLabel(program); 
++                         gen_bt_instruction(program, eval_unless.end, 0);
++                      }
++                      UNLESS 
++                      {
++                         assignLabel(program, eval_unless.start);
++                      }
++                      exp
++                      {
++                         if ($7.expression_type == IMMEDIATE)
++                           gen_load_immediate(program, $7.value);
++                         else {
++                           gen_andb_instruction(program, $7.value, $7.value, $7.value, CG_DIRECT_ALL);
++                         }
++                         gen_beq_instruction(program, eval_unless.body, 0);
++                         assignLabel(program, eval_unless.end);
++                      }
++;
+ return_statement : RETURN
+             {
+                /* insert an HALT instruction */
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..bf17450 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile eval_unless mult_table power semi assign arrays arrays2 misc
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/eval_unless/eval_unless.src b/tests/eval_unless/eval_unless.src
+new file mode 100644
+index 0000000..89ecb51
+--- /dev/null
++++ b/tests/eval_unless/eval_unless.src
+@@ -0,0 +1,18 @@
++int x;
++int y;
++x = 2;
++y = 1;
++
++eval {
++  y = 42;
++} unless 1;
++
++write(y);
++
++eval {
++  y = 42;
++} unless x == 1;
++
++write(y);
++
++
