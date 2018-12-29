@@ -1,0 +1,104 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..3672481 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -87,6 +87,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "&&"              { return ANDAND; }
+ "||"              { return OROR; }
+ ","               { return COMMA; }
++"=a="             { return ARREQ; }
+ 
+ "do"              { return DO; }
+ "else"            { return ELSE; }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..ef7d123 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -117,7 +117,7 @@ extern int yyerror(const char* errmsg);
+ %token LBRACE RBRACE LPAR RPAR LSQUARE RSQUARE
+ %token SEMI COLON PLUS MINUS MUL_OP DIV_OP MOD_OP
+ %token AND_OP OR_OP NOT_OP
+-%token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ
++%token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ ARREQ
+ %token ANDAND OROR
+ %token COMMA
+ %token FOR
+@@ -149,7 +149,7 @@ extern int yyerror(const char* errmsg);
+ %left OR_OP
+ %left AND_OP
+ %left EQ NOTEQ
+-%left LT GT LTEQ GTEQ
++%left LT GT LTEQ GTEQ ARREQ
+ %left SHL_OP SHR_OP
+ %left MINUS PLUS
+ %left MUL_OP DIV_OP
+@@ -570,6 +570,36 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                                  (program, exp_r0, $2, SUB);
+                         }
+                      }
++   | IDENTIFIER ARREQ IDENTIFIER 
++   {
++      t_axe_variable *l = getVariable(program, $1);
++      t_axe_variable *r = getVariable(program, $3);
++      if (!l->isArray || !r->isArray) 
++        exit(-1);
++      else if (l->arraySize != r->arraySize)
++        $$ = create_expression(0, IMMEDIATE);
++      else {
++        t_axe_label *loop = newLabel(program);
++        t_axe_label *out = newLabel(program);
++        int i = getNewRegister(program);
++        int temp = getNewRegister(program);
++        int r1, r2;
++        t_axe_expression i_e = create_expression(i, REGISTER);
++        gen_addi_instruction(program, i, REG_0, 0);
++        assignLabel(program, loop);
++        gen_subi_instruction(program, temp, i, l->arraySize);
++        gen_bge_instruction(program, out, 0);
++        r1 = loadArrayElement(program, $1, i_e);
++        r2 = loadArrayElement(program, $3, i_e);
++        gen_sub_instruction(program, temp, r1, r2, CG_DIRECT_ALL);
++        gen_bne_instruction(program, out, 0);
++        gen_addi_instruction(program, i, i, 1);
++        gen_bt_instruction(program, loop, 0);
++        assignLabel(program, out);
++        gen_notl_instruction(program, temp, temp);
++        $$ = create_expression(temp, REGISTER);
++      }
++   }
+ ;
+ 
+ %%
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..bdd2113 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc arreq
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/arreq/arreq.src b/tests/arreq/arreq.src
+new file mode 100644
+index 0000000..cebdcf8
+--- /dev/null
++++ b/tests/arreq/arreq.src
+@@ -0,0 +1,14 @@
++int a[2];
++int b[2];
++int c[3];
++int d[2];
++int r;
++
++a[0] = 0;
++a[1] = 1;
++b[0] = 0;
++b[1] = 1;
++d[0] = 42;
++write(a =a= b);
++write(a =a= c);
++write(a =a= d);
