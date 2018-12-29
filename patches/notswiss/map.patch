@@ -1,0 +1,162 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..f2c24f4 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -91,6 +91,9 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "do"              { return DO; }
+ "else"            { return ELSE; }
+ "for"             { return FOR; }
++"map"             { return MAP; }
++"on"              { return ON; }
++"as"              { return AS; }
+ "if"              { return IF; }
+ "int"             { yylval.intval = INTEGER_TYPE; return TYPE; }
+ "while"           { return WHILE; }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..87964d3 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -108,6 +108,7 @@ extern int yyerror(const char* errmsg);
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
++   t_map_statement map_stmt;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -121,12 +122,14 @@ extern int yyerror(const char* errmsg);
+ %token ANDAND OROR
+ %token COMMA
+ %token FOR
++%token ON AS
+ %token RETURN
+ %token READ
+ %token WRITE
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
++%token <map_stmt> MAP
+ %token <label> IF
+ %token <label> ELSE
+ %token <intval> TYPE
+@@ -246,6 +249,7 @@ statements  : statements statement       { /* does nothing */ }
+ statement   : assign_statement SEMI      { /* does nothing */ }
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
++            | map_statement {}
+             | SEMI            { gen_nop_instruction(program); }
+ ;
+ 
+@@ -457,6 +461,37 @@ write_statement : WRITE LPAR exp RPAR
+             }
+ ;
+ 
++map_statement : MAP IDENTIFIER ON IDENTIFIER AS 
++              {
++                t_axe_variable *e = getVariable(program, $2);
++                t_axe_variable *v = getVariable(program, $4);
++                if(e->isArray || !v->isArray) exit(-1);
++                $1 = create_map_statement();
++                int location = get_symbol_location(program, $2, 0);
++                int i = gen_load_immediate(program, 0);
++                t_axe_expression i_exp = create_expression(i, REGISTER);
++                t_axe_expression e_exp = create_expression(location, REGISTER);
++                int temp = getNewRegister(program);
++                $1.out = newLabel(program);
++                t_axe_label *loop = assignNewLabel(program);
++                gen_subi_instruction(program, temp, i, v->arraySize);
++                gen_bge_instruction(program, $1.out, 0);
++                temp = loadArrayElement(program, $4, i_exp);
++                gen_addi_instruction(program, location, temp, 0); /* e = v[i] */
++                $1.body = newLabel(program);
++                gen_bt_instruction(program, $1.body, 0);
++                $1.assign = assignNewLabel(program);
++                storeArrayElement(program, $4, i_exp, e_exp);
++                gen_addi_instruction(program, i, i, 1);
++                gen_bt_instruction(program, loop, 0);
++                assignLabel(program, $1.body);
++              }
++              code_block
++              {
++                gen_bt_instruction(program, $1.assign, 0);
++                assignLabel(program, $1.out);
++              }
++;
+ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    | IDENTIFIER  {
+                      int location;
+diff --git a/acse/axe_struct.c b/acse/axe_struct.c
+index b2761a0..4373302 100644
+--- a/acse/axe_struct.c
++++ b/acse/axe_struct.c
+@@ -100,6 +100,14 @@ t_while_statement create_while_statement()
+    return statement;
+ }
+ 
++t_map_statement create_map_statement()
++{
++  t_map_statement statement;
++  statement.assign = NULL;
++  statement.body = NULL;
++  statement.out = NULL;
++  return statement;
++}
+ t_axe_label * alloc_label(int value)
+ {
+    t_axe_label *result;
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index 47663cc..a25ab24 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,10 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_map_statement
++{
++  t_axe_label *body, *assign, *out;
++} t_map_statement;
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+@@ -123,6 +127,7 @@ extern t_axe_expression create_expression (int value, int type);
+ /* create an instance that will mantain infos about a while statement */
+ extern t_while_statement create_while_statement();
+ 
++extern t_map_statement create_map_statement();
+ /* create an instance of `t_axe_register' */
+ extern t_axe_register * alloc_register(int ID, int indirect);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..2bba7d4 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc map
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/map/map.src b/tests/map/map.src
+new file mode 100644
+index 0000000..e5e6e5d
+--- /dev/null
++++ b/tests/map/map.src
+@@ -0,0 +1,14 @@
++int vett[100];
++int elem;
++vett[0] = 2;
++vett[1] = 10;
++vett[2] = 9;
++
++map elem on vett as {
++  elem = elem * 2;
++}
++
++write(vett[0]);
++write(vett[1]);
++write(vett[2]);
++// now vett = {4, 20, 18}
