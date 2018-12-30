@@ -1,0 +1,178 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..4c6353d 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -98,6 +98,11 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "read"            { return READ; }
+ "write"           { return WRITE; }
+ 
++"switch"          { return SWITCH; }
++"case"            { return CASE; }
++"default"         { return DEFAULT; }
++"break"           { return BREAK; }
++
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+                     return(NUMBER); }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..828cb06 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -93,6 +93,8 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
++t_list *switches;
++
+ %}
+ %expect 1
+ 
+@@ -108,6 +110,7 @@ extern int yyerror(const char* errmsg);
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
++   t_switch_statement *switch_stmt;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -125,6 +128,10 @@ extern int yyerror(const char* errmsg);
+ %token READ
+ %token WRITE
+ 
++%token DEFAULT BREAK
++%token <switch_stmt> SWITCH
++%token <label> CASE
++
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+@@ -246,12 +253,14 @@ statements  : statements statement       { /* does nothing */ }
+ statement   : assign_statement SEMI      { /* does nothing */ }
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
++            | break_statement SEMI {}
+             | SEMI            { gen_nop_instruction(program); }
+ ;
+ 
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
++            | switch_statement
+             | return_statement SEMI      { /* does nothing */ }
+ ;
+ 
+@@ -259,6 +268,55 @@ read_write_statement : read_statement  { /* does nothing */ }
+                      | write_statement { /* does nothing */ }
+ ;
+ 
++switch_statement : SWITCH LPAR IDENTIFIER RPAR LBRACE 
++                 {
++                    int location = get_symbol_location(program, $3, 0);
++                    $1 = (t_switch_statement *) malloc(sizeof(t_switch_statement));
++                    $1->out = newLabel(program);
++                    $1->exp = create_expression(location, REGISTER);
++                    $1->cmp = gen_load_immediate(program, 1);  /* Holds 0 only if a case got triggered */
++                    switches = addFirst(switches, $1);
++                 }
++                 case_statements RBRACE 
++                 {
++                    switches = removeFirst(switches); 
++                    assignLabel(program, $1->out);
++                 }                 
++;
++
++case_statements : case_statement case_statements {}
++                | default_statement {}
++                | {}
++;
++
++case_statement : CASE NUMBER COLON 
++               {
++                  t_axe_label *statements = newLabel(program);
++                  $1 = newLabel(program);
++                  t_switch_statement *stmt = (t_switch_statement *) getElementAt(switches, 0)->data;
++                  int tmp = getNewRegister(program);
++                  gen_subi_instruction(program, tmp, stmt->cmp, 0);
++                  gen_beq_instruction(program, statements, 0); /* Skips case comparison if a previous one got triggered */
++                  t_axe_expression result = handle_binary_comparison(program, create_expression($2, IMMEDIATE), stmt->exp, _EQ_);
++                  gen_addi_instruction(program, stmt->cmp, result.value, 0);
++                  gen_beq_instruction(program, $1, 0);
++                  assignLabel(program, statements);
++               } 
++               statements {
++                  assignLabel(program, $1);
++               }
++;
++
++default_statement : DEFAULT COLON statements {}
++;
++
++break_statement: BREAK 
++               {
++                  t_axe_label *out = ((t_switch_statement *) getElementAt(switches, 0)->data)->out;
++                  gen_bt_instruction(program, out, 0);
++               }
++;
++
+ assign_statement : IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
+             {
+                /* Notify to `program' that the value $6
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index 47663cc..cb0cc09 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,13 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_switch_statement
++{
++  t_axe_expression exp;
++  t_axe_label *out;
++  int cmp;   // register used for comparisons
++} t_switch_statement;
++
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..ca0afca 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc switch
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/switch/switch.src b/tests/switch/switch.src
+new file mode 100644
+index 0000000..41d4005
+--- /dev/null
++++ b/tests/switch/switch.src
+@@ -0,0 +1,22 @@
++int x = 1;
++
++switch(x){
++  case 0:
++    write(0);
++    break;
++  case 1:
++    write(1);
++    switch(x){
++      case 1:
++        write(42);
++        break;
++      default:
++        write(1);
++        break;
++    }
++  case 2:
++    write(2);
++    break;
++  default:
++    write(42);
++}
