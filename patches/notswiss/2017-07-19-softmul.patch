@@ -1,0 +1,106 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..3d37682 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -70,6 +70,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "+"               { return PLUS; }
+ "-"               { return MINUS; }
+ "*"               { return MUL_OP; }
++"[*]"             { return SOFT_MUL; }
+ "/"               { return DIV_OP; }
+ "%"               { return MOD_OP; }
+ "&"               { return AND_OP; }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..e4d1256 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -115,7 +115,7 @@ extern int yyerror(const char* errmsg);
+ %start program
+ 
+ %token LBRACE RBRACE LPAR RPAR LSQUARE RSQUARE
+-%token SEMI COLON PLUS MINUS MUL_OP DIV_OP MOD_OP
++%token SEMI COLON PLUS MINUS MUL_OP DIV_OP MOD_OP SOFT_MUL
+ %token AND_OP OR_OP NOT_OP
+ %token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ
+ %token ANDAND OROR
+@@ -152,7 +152,7 @@ extern int yyerror(const char* errmsg);
+ %left LT GT LTEQ GTEQ
+ %left SHL_OP SHR_OP
+ %left MINUS PLUS
+-%left MUL_OP DIV_OP
++%left MUL_OP DIV_OP SOFT_MUL
+ %right NOT_OP
+ 
+ /*=========================================================================
+@@ -526,6 +526,45 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    | exp MUL_OP exp     {
+                            $$ = handle_bin_numeric_op(program, $1, $3, MUL);
+    }
++   | exp SOFT_MUL exp
++   {
++      int l, r, i, product;
++      if ($1.expression_type == IMMEDIATE)
++        l = gen_load_immediate(program, $1.value);
++      else{
++        l = getNewRegister(program);
++        gen_addi_instruction(program, l, $1.value, 0);
++      }
++      if ($3.expression_type == IMMEDIATE) {
++        r = gen_load_immediate(program, $3.value);
++        i = gen_load_immediate(program, $3.value);
++      } else {
++        r = getNewRegister(program);
++        i = getNewRegister(program);
++        gen_addi_instruction(program, r, $3.value, 0);
++        gen_addi_instruction(program, i, $3.value, 0);
++      }
++      t_axe_label *neg = newLabel(program);
++      t_axe_label *end = newLabel(program);
++      gen_blt_instruction(program, neg, 0);
++      product = gen_load_immediate(program, 0);
++      /* Positive multiplication loop */
++      t_axe_label *pos = assignNewLabel(program);
++      gen_subi_instruction(program, i, i, 0);
++      gen_beq_instruction(program, end, 0);
++      gen_add_instruction(program, product, product, l, CG_DIRECT_ALL);
++      gen_subi_instruction(program, i, i, 1);
++      gen_bt_instruction(program, pos, 0);
++      /* Negative multiplication loop */
++      assignLabel(program, neg);
++      gen_subi_instruction(program, i, i, 0);
++      gen_beq_instruction(program, end, 0);
++      gen_sub_instruction(program, product, product, l, CG_DIRECT_ALL);
++      gen_addi_instruction(program, i, i, 1);
++      gen_bt_instruction(program, neg, 0);
++      assignLabel(program, end);
++      $$ = create_expression(product, REGISTER);
++   }
+    | exp DIV_OP exp     {
+                            $$ = handle_bin_numeric_op(program, $1, $3, DIV);
+    }
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..833f5dd 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc softmul
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/softmul/softmul.src b/tests/softmul/softmul.src
+new file mode 100644
+index 0000000..19e91b4
+--- /dev/null
++++ b/tests/softmul/softmul.src
+@@ -0,0 +1,7 @@
++int x = 2;
++int y = 3;
++int z = 4;
++
++y = -y;
++write(x [*] z);
++write(y [*] z);
