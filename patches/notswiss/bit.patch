@@ -11,7 +11,7 @@ index 663b2db..0077051 100644
  {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
  {DIGIT}+          { yylval.intval = atoi( yytext );
 diff --git a/acse/Acse.y b/acse/Acse.y
-index 57ff107..cbb55ba 100644
+index 57ff107..11a7ff5 100644
 --- a/acse/Acse.y
 +++ b/acse/Acse.y
 @@ -124,6 +124,7 @@ extern int yyerror(const char* errmsg);
@@ -22,7 +22,7 @@ index 57ff107..cbb55ba 100644
  
  %token <label> DO
  %token <while_stmt> WHILE
-@@ -484,6 +485,29 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+@@ -484,6 +485,30 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
                       /* free the memory associated with the IDENTIFIER */
                       free($1);
     }
@@ -48,6 +48,7 @@ index 57ff107..cbb55ba 100644
 +        assignLabel(program, end);
 +        $$ = create_expression(result, REGISTER);
 +    }
++    free($4);
 +   }
     | NOT_OP NUMBER   {  if ($2 == 0)
                             $$ = create_expression (1, IMMEDIATE);
