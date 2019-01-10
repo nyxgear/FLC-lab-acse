@@ -1,0 +1,152 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..4f4f5e8 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,7 +97,9 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
+-
++"count" {return COUNT;}
++"when"  {return WHEN;}
++"into"  {return INTO;}
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+                     return(NUMBER); }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..7f8595f 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -93,6 +93,8 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
++t_list *cwi_stack;
++
+ %}
+ %expect 1
+ 
+@@ -108,6 +110,7 @@ extern int yyerror(const char* errmsg);
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
++   t_cwi_statement *cwi_stmt;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -125,6 +128,10 @@ extern int yyerror(const char* errmsg);
+ %token READ
+ %token WRITE
+ 
++%token <cwi_stmt> COUNT
++%token <label> WHEN 
++%token INTO
++
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+@@ -252,6 +259,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
++            | cwi_statement SEMI {}
+             | return_statement SEMI      { /* does nothing */ }
+ ;
+ 
+@@ -411,6 +419,41 @@ do_while_statement  : DO
+                      }
+ ;
+ 
++cwi_statement : COUNT 
++              {
++                $1 = (t_cwi_statement *) malloc(sizeof(t_cwi_statement));
++                $1->count = gen_load_immediate(program, 0);
++                cwi_stack = addFirst(cwi_stack, $1);
++              } LBRACE when_statements RBRACE INTO IDENTIFIER
++              {
++                t_axe_variable *v = getVariable(program, $7);
++                if(v->isArray) notifyError(AXE_INVALID_VARIABLE);
++                int location = get_symbol_location(program, $7, 0);
++                gen_addi_instruction(program, location, $1->count, 0);
++                free($7);
++                cwi_stack = removeFirst(cwi_stack);
++              }
++;
++
++when_statements : when_statement COMMA when_statements
++                | when_statement
++;
++
++when_statement : WHEN LPAR exp 
++               {
++                  if ($3.expression_type == IMMEDIATE)
++                    gen_load_immediate(program, $3.value);
++                  else
++                    gen_andb_instruction(program, $3.value, $3.value, $3.value, CG_DIRECT_ALL);
++                  $1 = newLabel(program);
++                  gen_beq_instruction(program, $1, 0);
++                  t_cwi_statement *curr = (t_cwi_statement *) getElementAt(cwi_stack, 0)->data;
++                  gen_addi_instruction(program, curr->count, curr->count, 1);
++               } RPAR code_block
++               {
++                  assignLabel(program, $1);
++               }
++;
+ return_statement : RETURN
+             {
+                /* insert an HALT instruction */
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index 47663cc..da6ab6b 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,10 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_cwi_statement
++{
++   int count;
++} t_cwi_statement;
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..32a67df 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc cwi
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/cwi/cwi.src b/tests/cwi/cwi.src
+new file mode 100644
+index 0000000..e8ce28d
+--- /dev/null
++++ b/tests/cwi/cwi.src
+@@ -0,0 +1,21 @@
++int a,b;
++
++count {
++
++  when (3){
++
++    write(2);
++  },
++
++  when (b-5){
++
++    if(a+b==7){
++
++      b=b+1;
++
++    }
++
++  }, when (0) { }
++
++
++} into a;
