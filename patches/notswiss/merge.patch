@@ -11,7 +11,7 @@ index 663b2db..e7262ea 100644
  {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
  {DIGIT}+          { yylval.intval = atoi( yytext );
 diff --git a/acse/Acse.y b/acse/Acse.y
-index 57ff107..58aa8a3 100644
+index 57ff107..f09e785 100644
 --- a/acse/Acse.y
 +++ b/acse/Acse.y
 @@ -124,6 +124,7 @@ extern int yyerror(const char* errmsg);
@@ -33,7 +33,7 @@ index 57ff107..58aa8a3 100644
  %left OROR
  %left ANDAND
  %left OR_OP
-@@ -484,6 +485,20 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+@@ -484,6 +485,22 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
                       /* free the memory associated with the IDENTIFIER */
                       free($1);
     }
@@ -41,15 +41,17 @@ index 57ff107..58aa8a3 100644
 +   {
 +      int mask = getNewRegister(program);
 +      if ($6.expression_type == IMMEDIATE)
-+        mask = gen_load_immediate(program, $6.value);
-+      else
-+        gen_andb_instruction(program, mask, $6.value, $6.value, CG_DIRECT_ALL);
-+      gen_subi_instruction(program, mask, mask, 1); /* Mask = 0..0 if $6 == 1 else Mask = 1..1 */
-+      int nmask = getNewRegister(program);
-+      gen_notb_instruction(program, nmask, mask);
-+      $$ = handle_bin_numeric_op(program, 
-+        handle_bin_numeric_op(program, create_expression(mask, REGISTER), $2, ANDB), 
-+        handle_bin_numeric_op(program, create_expression(nmask, REGISTER), $4, ANDB), ORB);
++        $$ = $6.value ? $2 : $4;
++      else {
++        t_axe_expression mask = create_expression(0, IMMEDIATE);
++        mask = handle_binary_comparison(program, $6, mask, _EQ_);
++        mask = handle_bin_numeric_op(program, mask, create_expression(1, IMMEDIATE), SUB);
++        int nmask = getNewRegister(program);
++        gen_notb_instruction(program, nmask, mask.value);
++        $$ = handle_bin_numeric_op(program, 
++          handle_bin_numeric_op(program, mask, $2, ANDB), 
++          handle_bin_numeric_op(program, create_expression(nmask, REGISTER), $4, ANDB), ORB);
++     }
 +   }
     | NOT_OP NUMBER   {  if ($2 == 0)
                             $$ = create_expression (1, IMMEDIATE);
