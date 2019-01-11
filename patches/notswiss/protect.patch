@@ -1,0 +1,155 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..ab7324e 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,8 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"protect"         { return PROTECT; }
++"with"            { return WITH; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..b760b64 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -93,6 +93,8 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
++t_list *with_stack;
++
+ %}
+ %expect 1
+ 
+@@ -124,7 +126,7 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
+-
++%token <label> PROTECT WITH
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+@@ -136,6 +138,7 @@ extern int yyerror(const char* errmsg);
+ %type <expr> exp
+ %type <decl> declaration
+ %type <list> declaration_list
++%type <label> protect_stmt
+ %type <label> if_stmt
+ 
+ /*=========================================================================
+@@ -249,9 +252,9 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+             | SEMI            { gen_nop_instruction(program); }
+ ;
+ 
+-control_statement : if_statement         { /* does nothing */ }
+-            | while_statement            { /* does nothing */ }
++control_statement : while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
++            | protect_statement {}
+             | return_statement SEMI      { /* does nothing */ }
+ ;
+ 
+@@ -411,6 +414,37 @@ do_while_statement  : DO
+                      }
+ ;
+ 
++protect_statement : protect_stmt
++                  {
++                    t_axe_label *cont = newLabel(program);
++                    gen_bt_instruction(program, cont, 0);
++                    assignLabel(program, $1);
++                    gen_halt_instruction(program);
++                    assignLabel(program, cont);
++                    with_stack = removeFirst(with_stack);
++                  }
++                  | protect_stmt WITH 
++                  {
++                    $2 = newLabel(program);
++                    gen_bt_instruction(program, $2, 0);
++                    assignLabel(program, $1);
++                    with_stack = removeFirst(with_stack);
++                  } code_block
++                  {
++                    assignLabel(program, $2);
++                  }
++;
++
++protect_stmt : PROTECT 
++              {
++                $1 = newLabel(program);
++                with_stack = addFirst(with_stack, $1);
++              } code_block
++              {
++                $$ = $1;
++              }
++;
++
+ return_statement : RETURN
+             {
+                /* insert an HALT instruction */
+@@ -527,7 +561,21 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                            $$ = handle_bin_numeric_op(program, $1, $3, MUL);
+    }
+    | exp DIV_OP exp     {
+-                           $$ = handle_bin_numeric_op(program, $1, $3, DIV);
++                           t_axe_label *with = (t_axe_label *) getElementAt(with_stack, 0)->data;
++                           if ($3.expression_type == IMMEDIATE && $3.value == 0) {
++                              if (!with) gen_halt_instruction(program);
++                              else gen_bt_instruction(program, with, 0);
++                           } else if ($3.expression_type != IMMEDIATE){
++                              gen_andb_instruction(program, $3.value, $3.value, $3.value, CG_DIRECT_ALL);
++                              t_axe_label *cont = newLabel(program);
++                              gen_bne_instruction(program, cont, 0);
++                              if (!with) gen_halt_instruction(program);
++                              else gen_bt_instruction(program, with, 0);
++                              assignLabel(program, cont);
++                              $$ = handle_bin_numeric_op(program, $1, $3, DIV);
++                           } else {  /* IMMEDIATE && != 0 */
++                              $$ = handle_bin_numeric_op(program, $1, $3, DIV);
++                           }
+    }
+    | exp LT exp      {
+                         $$ = handle_binary_comparison (program, $1, $3, _LT_);
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..b44a6de 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc protect
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/protect/protect.src b/tests/protect/protect.src
+new file mode 100644
+index 0000000..1979d46
+--- /dev/null
++++ b/tests/protect/protect.src
+@@ -0,0 +1,20 @@
++int a, b;
++a = 1;
++b = 1;
++
++protect{
++  write(a/b); //if b==0 jump to 13
++  protect{
++    write(a/(b-1)); //if b==1 jump to 9
++  }
++  with{
++    a = a/(a-b); //if a==b jump to 13
++    write(a);
++  }
++}
++with{
++  protect{
++    write(a/(b-2)); //if b==2 the program terminates
++  }
++  write(42);
++}
