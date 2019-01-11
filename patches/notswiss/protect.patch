@@ -12,18 +12,21 @@ index 663b2db..ab7324e 100644
  {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
  {DIGIT}+          { yylval.intval = atoi( yytext );
 diff --git a/acse/Acse.y b/acse/Acse.y
-index 57ff107..b760b64 100644
+index 57ff107..5119d2b 100644
 --- a/acse/Acse.y
 +++ b/acse/Acse.y
-@@ -93,6 +93,8 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+@@ -93,8 +93,10 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
  extern int yylex(void);
  extern int yyerror(const char* errmsg);
  
 +t_list *with_stack;
 +
  %}
- %expect 1
+-%expect 1
++%expect 2
  
+ /*=========================================================================
+                           SEMANTIC RECORDS
 @@ -124,7 +126,7 @@ extern int yyerror(const char* errmsg);
  %token RETURN
  %token READ
@@ -41,19 +44,19 @@ index 57ff107..b760b64 100644
  %type <label> if_stmt
  
  /*=========================================================================
-@@ -249,9 +252,9 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+@@ -249,9 +252,10 @@ statement   : assign_statement SEMI      { /* does nothing */ }
              | SEMI            { gen_nop_instruction(program); }
  ;
  
 -control_statement : if_statement         { /* does nothing */ }
--            | while_statement            { /* does nothing */ }
-+control_statement : while_statement            { /* does nothing */ }
++control_statement : if_statement {}
+             | while_statement            { /* does nothing */ }
              | do_while_statement SEMI    { /* does nothing */ }
 +            | protect_statement {}
              | return_statement SEMI      { /* does nothing */ }
  ;
  
-@@ -411,6 +414,37 @@ do_while_statement  : DO
+@@ -411,6 +415,37 @@ do_while_statement  : DO
                       }
  ;
  
@@ -91,7 +94,7 @@ index 57ff107..b760b64 100644
  return_statement : RETURN
              {
                 /* insert an HALT instruction */
-@@ -527,7 +561,21 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+@@ -527,7 +562,21 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
                             $$ = handle_bin_numeric_op(program, $1, $3, MUL);
     }
     | exp DIV_OP exp     {
