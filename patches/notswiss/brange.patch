@@ -1,0 +1,103 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..3f2563a 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"brange"          { return BRANGE; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..ccca398 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -124,6 +124,7 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
++%token BRANGE
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -552,6 +553,50 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    | exp ANDAND exp  {  $$ = handle_bin_numeric_op(program, $1, $3, ANDL); }
+    | exp OROR exp    {  $$ = handle_bin_numeric_op(program, $1, $3, ORL); }
+    | LPAR exp RPAR   { $$ = $2; }
++   | BRANGE LPAR IDENTIFIER COMMA exp COMMA exp RPAR
++   {
++      t_axe_variable *var = getVariable(program, $3);
++      if (var->isArray) notifyError(AXE_INVALID_VARIABLE);
++      int lo, hi;
++      int result = gen_load_immediate(program, 0);
++      int temp = getNewRegister(program);
++      t_axe_label *end = newLabel(program);
++      if ($5.expression_type == IMMEDIATE) {
++        if ($5.value < 0) gen_bt_instruction(program, end, 0);
++        else lo = gen_load_immediate(program, $5.value);
++      } else {
++        lo = getNewRegister(program);
++        gen_addi_instruction(program, lo, $5.value, 0);
++        gen_blt_instruction(program, end, 0);
++      }
++      if ($7.expression_type == IMMEDIATE) {
++        if ($7.value > 31) gen_bt_instruction(program, end, 0);
++        else hi = gen_load_immediate(program, $7.value);
++      } else {
++        hi = getNewRegister(program);
++        gen_addi_instruction(program, hi, $7.value, 0);
++        gen_subi_instruction(program, temp, hi, 31);
++        gen_bgt_instruction(program, end, 0);
++      }
++      gen_sub_instruction(program, temp, hi, lo, CG_DIRECT_ALL);
++      gen_blt_instruction(program, end, 0);
++      int mask = gen_load_immediate(program, 0);
++      gen_addi_instruction(program, temp, temp, 1);  /* Mask first hi - lo + 1 bits */
++      t_axe_label *mask_loop = assignNewLabel(program);
++      t_axe_label *mask_end = newLabel(program);
++      gen_subi_instruction(program, temp, temp, 1);
++      gen_blt_instruction(program, mask_end, 0);
++      gen_muli_instruction(program, mask, mask, 2);
++      gen_addi_instruction(program, mask, mask, 1);
++      gen_bt_instruction(program, mask_loop, 0);
++      assignLabel(program, mask_end);
++      /* Shift to right lo times */
++      int location = get_symbol_location(program, $3, 0);
++      gen_shr_instruction(program, result, lo, location, CG_DIRECT_ALL);
++      gen_andb_instruction(program, result, result, mask, CG_DIRECT_ALL);
++      assignLabel(program, end);
++      $$ = create_expression(result, REGISTER);
++   }
+    | MINUS exp       {
+                         if ($2.expression_type == IMMEDIATE)
+                         {
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..c3c488c 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc brange
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/brange/brange.src b/tests/brange/brange.src
+new file mode 100644
+index 0000000..964830b
+--- /dev/null
++++ b/tests/brange/brange.src
+@@ -0,0 +1,9 @@
++int v, r;
++
++v = 11584;
++
++r = 42 + brange(v, 2, 12);
++
++// r = 42 + 848 = 890
++
++write(r);
