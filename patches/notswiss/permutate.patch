@@ -1,0 +1,116 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..90753ff 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,9 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"permutate"       { return PERMUTATE; }
++"q["              { return POPEN; }
++"]p"              { return PCLOSE; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..affb00a 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -93,6 +93,13 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
++struct {
++  char *id;
++  t_axe_variable *arr;
++  t_axe_expression start;
++  t_axe_expression last;
++} perm;
++
+ %}
+ %expect 1
+ 
+@@ -124,6 +131,7 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
++%token PERMUTATE POPEN PCLOSE
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -246,9 +254,39 @@ statements  : statements statement       { /* does nothing */ }
+ statement   : assign_statement SEMI      { /* does nothing */ }
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
++            | permutate_statement SEMI
+             | SEMI            { gen_nop_instruction(program); }
+ ;
+ 
++permutate_statement : PERMUTATE LPAR IDENTIFIER
++                    {
++                      perm.id = $3;
++                      perm.arr = getVariable(program, $3);
++                      if (!perm.arr->isArray) notifyError(AXE_INVALID_VARIABLE);
++                    } COMMA POPEN permutate_indexes PCLOSE RPAR
++                    {
++                      storeArrayElement(program, perm.id, perm.start, perm.last);
++                    }
++;
++
++permutate_indexes : NUMBER
++                  {
++                    if (perm.arr->arraySize <= $1 || $1 < 0) notifyError(AXE_INVALID_EXPRESSION);
++                    perm.start = create_expression($1, IMMEDIATE);
++                    perm.last = create_expression(loadArrayElement(program, perm.id, perm.start), REGISTER);
++                  } 
++                  | permutate_indexes COMMA NUMBER
++                  {
++                    if (perm.arr->arraySize <= $3 || $3 < 0) notifyError(AXE_INVALID_EXPRESSION);
++                    t_axe_expression curr = create_expression($3, IMMEDIATE);
++                    int new_value = loadArrayElement(program, perm.id, curr);
++                    int tmp = getNewRegister(program);
++                    gen_addi_instruction(program, tmp, new_value, 0);
++                    storeArrayElement(program, perm.id, curr, perm.last);
++                    perm.last = create_expression(tmp, REGISTER);
++                  }
++;
++
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..3f83023 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc permutate
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/permutate/permutate.src b/tests/permutate/permutate.src
+new file mode 100644
+index 0000000..8316d10
+--- /dev/null
++++ b/tests/permutate/permutate.src
+@@ -0,0 +1,17 @@
++int arr[6];
++
++arr[0] = 10;
++arr[1] = 11;
++arr[2] = 12;
++arr[3] = 13;
++arr[4] = 14;
++arr[5] = 15;
++
++permutate(arr, q[ 4, 2, 0 ]p);
++
++write(arr[0]);
++write(arr[1]);
++write(arr[2]);
++write(arr[3]);
++write(arr[4]);
++write(arr[5]);
