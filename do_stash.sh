@@ -1,4 +1,5 @@
 #!/bin/bash
+# Stash changes with git.
 
 echo -e '------> git add .'
 git add .

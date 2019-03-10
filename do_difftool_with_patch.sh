@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # GOAL: perform diff with the git difftool command with the professor's solution.
 #
 # 1. Stash local current changes  [0]

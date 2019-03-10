@@ -27,6 +27,10 @@ You're more than welcome to contribute to this repository!
 
 Feel free to drop a pull request in the case you would like to suggest any improvement, fix errors, add other solutions, etc..
 
+## Contributors
+
+- [nyxgear](https://github.com/nyxgear)
+- [NonSvizzero](https://github.com/NonSvizzero)
 
 [JetBrains CLion]: https://www.jetbrains.com/clion/
 [Meld merge]: http://meldmerge.org/

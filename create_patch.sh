@@ -1,5 +1,8 @@
+#!/bin/bash
+# Create a new patch file and commit it.
+
 if [ $# -eq 0 ] ; then
-  echo 'Pass file destination for patch'
+  echo "Error: missing file destination for patch.\nUsage: $0 path/to/patch_to_create.patch"
   exit 1
 fi
 
