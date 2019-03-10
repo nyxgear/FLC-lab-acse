@@ -1,0 +1,119 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..02808d0 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -91,6 +91,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "do"              { return DO; }
+ "else"            { return ELSE; }
+ "for"             { return FOR; }
++"in"              { return IN; }
+ "if"              { return IF; }
+ "int"             { yylval.intval = INTEGER_TYPE; return TYPE; }
+ "while"           { return WHILE; }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..6d9b82c 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -89,6 +89,11 @@ t_reg_allocator *RA;       /* Register allocator. It implements the "Linear scan
+ 
+ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ 
++struct {
++  t_axe_label *assign;
++  t_axe_label *exp;
++  t_axe_label *start;
++} listcomp;     /* Label used for the list comprehension construct */
+ 
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+@@ -120,7 +125,7 @@ extern int yyerror(const char* errmsg);
+ %token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ
+ %token ANDAND OROR
+ %token COMMA
+-%token FOR
++%token FOR IN
+ %token RETURN
+ %token READ
+ %token WRITE
+@@ -276,6 +281,47 @@ assign_statement : IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
+                 * by a call to the function `strdup' (see Acse.lex) */
+                free($1);
+             }
++            | IDENTIFIER ASSIGN LSQUARE 
++            {
++              listcomp.start = newLabel(program);
++              gen_bt_instruction(program, listcomp.start, 0);
++              listcomp.assign = newLabel(program);
++              listcomp.exp = assignNewLabel(program);
++            }
++            exp 
++            {
++              gen_bt_instruction(program, listcomp.assign, 0);
++            }
++            FOR IDENTIFIER IN IDENTIFIER RSQUARE
++            {
++              t_axe_variable *dest = getVariable(program, $1);
++              t_axe_variable *src = getVariable(program, $10);
++              if (!dest->isArray || !src->isArray) exit(-1);
++              else {
++                t_axe_label *loop = newLabel(program);
++                t_axe_label *out = newLabel(program);
++                assignLabel(program, listcomp.start);
++                int inner = get_symbol_location(program, $8, 0);
++                int i = getNewRegister(program);
++                int temp = getNewRegister(program);
++                gen_addi_instruction(program, i, REG_0, 0);
++                assignLabel(program, loop);
++                gen_subi_instruction(program, temp, i, src->arraySize);
++                gen_bge_instruction(program, out, 0);
++                t_axe_expression i_exp = create_expression(i, REGISTER);
++                temp = loadArrayElement(program, $10, i_exp);
++                gen_addi_instruction(program, inner, temp, 0);  /* inner = src[i] */
++                gen_bt_instruction(program, listcomp.exp, 0);
++                assignLabel(program, listcomp.assign);
++                storeArrayElement(program, $1, i_exp, $5);  /* dest[i] = exp*/
++                gen_addi_instruction(program, i, i, 1);
++                gen_bt_instruction(program, loop, 0);
++                assignLabel(program, out);
++              }
++              free($1);
++              free($8);
++              free($10);
++            }
+             | IDENTIFIER ASSIGN exp
+             {
+                int location;
+diff --git a/tests/Makefile b/tests/Makefile
+index a3aed3b..7d9ccc2 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile fact mult_table power semi assign arrays arrays2 misc listcomp
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/listcomp/listcomp.src b/tests/listcomp/listcomp.src
+new file mode 100644
+index 0000000..33f1811
+--- /dev/null
++++ b/tests/listcomp/listcomp.src
+@@ -0,0 +1,15 @@
++int i, x[5], y[7];
++i = 3;
++
++x[0] = 1; x[1] = 2; x[2] = 3;
++
++x[3] = 4; x[4] = 5;
++
++// y = {-2, 1, 6, 13, 22, undef, undef}
++y = [i * i - 3 for i in x];
++
++i = 0;
++while (i < 7) {
++  write(y[i]);
++  i = i + 1;
++}

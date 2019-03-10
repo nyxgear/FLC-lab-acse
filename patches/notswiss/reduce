@@ -1,0 +1,86 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..cd2c206 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"red"             { return RED; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..a7387eb 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -124,6 +124,7 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
++%token RED
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -484,6 +485,25 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                      /* free the memory associated with the IDENTIFIER */
+                      free($1);
+    }
++   | RED LPAR IDENTIFIER RPAR
++   {
++      t_axe_variable *arr = getVariable(program, $3);
++      if(!arr->isArray) exit(-1);
++      int i = gen_load_immediate(program, 0);
++      t_axe_expression i_e = create_expression(i, REGISTER);
++      int sum = gen_load_immediate(program, 0);
++      int temp = getNewRegister(program);
++      t_axe_label *loop = assignNewLabel(program);
++      t_axe_label *end = newLabel(program);
++      gen_subi_instruction(program, temp, i, arr->arraySize);
++      gen_bge_instruction(program, end, 0);
++      temp = loadArrayElement(program, $3, i_e);
++      gen_add_instruction(program, sum, sum, temp, CG_DIRECT_ALL);
++      gen_addi_instruction(program, i, i, 1);
++      gen_bt_instruction(program, loop, 0);
++      assignLabel(program, end);
++      $$ = create_expression(sum, REGISTER);
++   }
+    | NOT_OP NUMBER   {  if ($2 == 0)
+                            $$ = create_expression (1, IMMEDIATE);
+                         else
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..67c222b 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc reduce
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/reduce/reduce.src b/tests/reduce/reduce.src
+new file mode 100644
+index 0000000..f63d48f
+--- /dev/null
++++ b/tests/reduce/reduce.src
+@@ -0,0 +1,17 @@
++int v[2], a;
++
++a = 0;
++
++v[0] = 3;
++
++v[1] = 2;
++
++a=red(v);
++
++while( red(v) ){
++
++v[0] = v[0]-1;
++
++v[1] = v[0];
++write(v[0]);
++}

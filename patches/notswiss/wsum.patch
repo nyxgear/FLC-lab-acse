@@ -1,0 +1,114 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..befa992 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,9 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"sum" {return SUM; }
++"weighted" {return WEIGHTED; }
++"by" {return BY; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..0153d96 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -93,6 +93,16 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
++t_list *sum_stack;
++
++void push_exp (t_axe_expression e)
++{
++  t_list *curr = (t_list *) getElementAt(sum_stack, 0);
++  t_axe_expression *p = (t_axe_expression *) malloc(sizeof(t_axe_expression));
++  *p = e;
++  curr->data = addLast(curr->data, p);
++}
++
+ %}
+ %expect 1
+ 
+@@ -124,6 +134,7 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
++%token SUM WEIGHTED BY
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -457,6 +468,11 @@ write_statement : WRITE LPAR exp RPAR
+             }
+ ;
+ 
++exp_list : exp_list COMMA exp { push_exp($3); }
++         | exp {push_exp($1);}
++
++;
++
+ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    | IDENTIFIER  {
+                      int location;
+@@ -484,6 +500,29 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                      /* free the memory associated with the IDENTIFIER */
+                      free($1);
+    }
++   | SUM WEIGHTED BY IDENTIFIER LSQUARE
++   {
++      t_axe_variable *arr = getVariable(program, $4);
++      if (!arr->isArray) notifyError(AXE_INVALID_VARIABLE);
++      sum_stack = addFirst(sum_stack, NULL);
++   } exp_list RSQUARE
++   {
++      int result = gen_load_immediate(program, 0);
++      t_list *list = (t_list *) getElementAt(sum_stack, 0)->data;
++      for (int i = 0; i < getLength(list); i++) {
++        int v = loadArrayElement(program, $4, create_expression(i, IMMEDIATE));
++        t_axe_expression *e = (t_axe_expression *) getElementAt(list, i)->data;
++        if (e->expression_type == IMMEDIATE)
++          gen_muli_instruction(program, v, v, e->value);
++        else
++          gen_mul_instruction(program, v, v, e->value, CG_DIRECT_ALL);
++        gen_add_instruction(program, result, result, v, CG_DIRECT_ALL);
++      }
++      sum_stack = removeFirst(sum_stack);
++      freeList(list);
++      free($4);
++      $$ = create_expression(result, REGISTER);
++    }
+    | NOT_OP NUMBER   {  if ($2 == 0)
+                            $$ = create_expression (1, IMMEDIATE);
+                         else
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..2e67c12 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc wsum
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/wsum/wsum.src b/tests/wsum/wsum.src
+new file mode 100644
+index 0000000..e2273f2
+--- /dev/null
++++ b/tests/wsum/wsum.src
+@@ -0,0 +1,10 @@
++int a,b;
++int v[2];
++v[0]=2;
++v[1]=1;
++a=10;
++b=3;
++write(28 - sum weighted by v [a+b,sum weighted by v [a+b,b-2] ] * 2);
++
++write(v[0]);
++write(v[1]);

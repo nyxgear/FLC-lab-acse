@@ -1,0 +1,204 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..9f2ca81 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,9 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"sum"             { return SUM; }
++"out of"          { return OUTOF; }
++"as"              { return AS; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..e047f35 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -124,7 +124,8 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
+-
++%token SUM
++%token <label> OUTOF AS
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+@@ -307,6 +308,34 @@ assign_statement : IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
+                /* free the memory associated with the IDENTIFIER */
+                free($1);
+             }
++            | IDENTIFIER ASSIGN SUM IDENTIFIER COMMA IDENTIFIER OUTOF IDENTIFIER AS
++            {
++               int i = get_symbol_location(program, $4, 0);
++               int j = get_symbol_location(program, $6, 0);
++               int k = gen_load_immediate(program, 0);
++               t_axe_expression k_e = create_expression(k, REGISTER);
++               t_axe_variable *arr = getVariable(program, $8);
++               if (!arr->isArray) notifyError(AXE_INVALID_VARIABLE);
++               int dest = get_symbol_location(program, $1, 0);
++               gen_addi_instruction(program, dest, REG_0, 0);
++               /* for (k = 0; k < size - 1;) { i = arr[k]; j = arr[k++]; } */
++               $9 = assignNewLabel(program);
++               gen_subi_instruction(program, getNewRegister(program), k, arr->arraySize - 1);
++               $7 = newLabel(program);
++               gen_bge_instruction(program, $7, 0);
++               gen_addi_instruction(program, i, loadArrayElement(program, $8, k_e), 0);
++               gen_addi_instruction(program, k, k, 1);
++               gen_addi_instruction(program, j, loadArrayElement(program, $8, k_e), 0);
++            } exp
++            {
++               int dest = get_symbol_location(program, $1, 0);
++               if ($11.expression_type == IMMEDIATE)
++                  gen_addi_instruction(program, dest, dest, $11.value);
++               else
++                  gen_add_instruction(program, dest, dest, $11.value, CG_DIRECT_ALL);
++               gen_bt_instruction(program, $9, 0);
++               assignLabel(program, $7);
++            }
+ ;
+             
+ if_statement   : if_stmt
+diff --git a/sum_out_of_as.patch b/sum_out_of_as.patch
+new file mode 100644
+index 0000000..ac77a41
+--- /dev/null
++++ b/sum_out_of_as.patch
+@@ -0,0 +1,99 @@
++diff --git a/acse/Acse.lex b/acse/Acse.lex
++index 663b2db..9f2ca81 100644
++--- a/acse/Acse.lex
+++++ b/acse/Acse.lex
++@@ -97,6 +97,9 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
++ "return"          { return RETURN; }
++ "read"            { return READ; }
++ "write"           { return WRITE; }
+++"sum"             { return SUM; }
+++"out of"          { return OUTOF; }
+++"as"              { return AS; }
++ 
++ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
++ {DIGIT}+          { yylval.intval = atoi( yytext );
++diff --git a/acse/Acse.y b/acse/Acse.y
++index 57ff107..e047f35 100644
++--- a/acse/Acse.y
+++++ b/acse/Acse.y
++@@ -124,7 +124,8 @@ extern int yyerror(const char* errmsg);
++ %token RETURN
++ %token READ
++ %token WRITE
++-
+++%token SUM
+++%token <label> OUTOF AS
++ %token <label> DO
++ %token <while_stmt> WHILE
++ %token <label> IF
++@@ -307,6 +308,34 @@ assign_statement : IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
++                /* free the memory associated with the IDENTIFIER */
++                free($1);
++             }
+++            | IDENTIFIER ASSIGN SUM IDENTIFIER COMMA IDENTIFIER OUTOF IDENTIFIER AS
+++            {
+++               int i = get_symbol_location(program, $4, 0);
+++               int j = get_symbol_location(program, $6, 0);
+++               int k = gen_load_immediate(program, 0);
+++               t_axe_expression k_e = create_expression(k, REGISTER);
+++               t_axe_variable *arr = getVariable(program, $8);
+++               if (!arr->isArray) notifyError(AXE_INVALID_VARIABLE);
+++               int dest = get_symbol_location(program, $1, 0);
+++               gen_addi_instruction(program, dest, REG_0, 0);
+++               /* for (k = 0; k < size - 1;) { i = arr[k]; j = arr[k++]; } */
+++               $9 = assignNewLabel(program);
+++               gen_subi_instruction(program, getNewRegister(program), k, arr->arraySize - 1);
+++               $7 = newLabel(program);
+++               gen_bge_instruction(program, $7, 0);
+++               gen_addi_instruction(program, i, loadArrayElement(program, $8, k_e), 0);
+++               gen_addi_instruction(program, k, k, 1);
+++               gen_addi_instruction(program, j, loadArrayElement(program, $8, k_e), 0);
+++            } exp
+++            {
+++               int dest = get_symbol_location(program, $1, 0);
+++               if ($11.expression_type == IMMEDIATE)
+++                  gen_addi_instruction(program, dest, dest, $11.value);
+++               else
+++                  gen_add_instruction(program, dest, dest, $11.value, CG_DIRECT_ALL);
+++               gen_bt_instruction(program, $9, 0);
+++               assignLabel(program, $7);
+++            }
++ ;
++             
++ if_statement   : if_stmt
++diff --git a/tests/Makefile b/tests/Makefile
++index ebbebd6..2beba48 100644
++--- a/tests/Makefile
+++++ b/tests/Makefile
++@@ -1,7 +1,7 @@
++ asm=$(CURDIR)/../bin/asm
++ acse=$(CURDIR)/../bin/acse
++ export asm acse
++-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
+++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc soa
++ 
++ test :
++ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
++diff --git a/tests/soa/soa.src b/tests/soa/soa.src
++new file mode 100644
++index 0000000..e57b608
++--- /dev/null
+++++ b/tests/soa/soa.src
++@@ -0,0 +1,17 @@
+++int i,j,r,v[4];
+++
+++v[0]=1;
+++
+++v[1]=4;
+++
+++v[2]=5;
+++
+++v[3]=6;
+++
+++r = sum i,j out of v as i+j*2;
+++write(r);
+++/* r = 1+4*2 + 4+5*2 + 5+6*2 */
+++
+++r = sum i,j out of v as 3*2-1;
+++write(r);
+++/* r = 5 + 5 + 5 */
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..2beba48 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc soa
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/soa/soa.src b/tests/soa/soa.src
+new file mode 100644
+index 0000000..e57b608
+--- /dev/null
++++ b/tests/soa/soa.src
+@@ -0,0 +1,17 @@
++int i,j,r,v[4];
++
++v[0]=1;
++
++v[1]=4;
++
++v[2]=5;
++
++v[3]=6;
++
++r = sum i,j out of v as i+j*2;
++write(r);
++/* r = 1+4*2 + 4+5*2 + 5+6*2 */
++
++r = sum i,j out of v as 3*2-1;
++write(r);
++/* r = 5 + 5 + 5 */

@@ -1,0 +1,101 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..0077051 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"bit"             { return BIT; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..11a7ff5 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -124,6 +124,7 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
++%token BIT
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -484,6 +485,30 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                      /* free the memory associated with the IDENTIFIER */
+                      free($1);
+    }
++   | LPAR BIT RPAR IDENTIFIER
++   {
++      t_axe_variable *arr = getVariable(program, $4);
++      if(!arr->isArray) {
++        $$ = create_expression(get_symbol_location(program, $4, 0), REGISTER);
++      } else {
++        int i = gen_load_immediate(program, arr->arraySize > 32 ? 32 : arr->arraySize);
++        t_axe_expression i_e = create_expression(i, REGISTER);
++        int result = gen_load_immediate(program, 0);
++        t_axe_label *end = newLabel(program);
++        t_axe_label *loop = assignNewLabel(program);
++        gen_subi_instruction(program, i, i, 1);
++        gen_blt_instruction(program, end, 0);
++        gen_shli_instruction(program, result, result, 1);
++        int v = loadArrayElement(program, $4, i_e);
++        gen_andb_instruction(program, v, v, v, CG_DIRECT_ALL);
++        gen_beq_instruction(program, loop, 0);
++        gen_addi_instruction(program, result, result, 1);
++        gen_bt_instruction(program, loop, 0);
++        assignLabel(program, end);
++        $$ = create_expression(result, REGISTER);
++    }
++    free($4);
++   }
+    | NOT_OP NUMBER   {  if ($2 == 0)
+                            $$ = create_expression (1, IMMEDIATE);
+                         else
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..f9c6dd8 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc bit
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/bit/bit.src b/tests/bit/bit.src
+new file mode 100644
+index 0000000..03cb45f
+--- /dev/null
++++ b/tests/bit/bit.src
+@@ -0,0 +1,27 @@
++int v1[3];
++
++int v2[1];
++
++int v3[40];
++
++int x = 10;
++
++//v1 encodes 110
++
++v1[2] = 15; v1[1] = 79; v1[0] = 0;
++
++//v2 encodes 1
++
++v2[0] = 1;
++
++//v3 encodes -2ˆ(31)
++
++v3[31]=37;
++
++write((bit)v1); //output 6
++
++write((bit)v2); //output 1
++
++write((bit)v3); //output -2ˆ(31)
++
++write((bit)x); //output 10

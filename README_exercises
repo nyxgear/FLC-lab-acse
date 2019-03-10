@@ -28,8 +28,9 @@ and where implicit memory operations have not been added yet.
 ----------------------------------------------------------
 Patch, compile compliler, compile program and test it
 
-1. Apply a patch:
+1. Apply a patch: 
 patch --no-backup-if-mismatch -Np1 -i patches/03\ -\ var\ declarations/01-define-simple.patch
+Alternatively, you can run the run_patch.sh script
 
 2. Compile compiler:
 make
@@ -37,6 +38,9 @@ make
 3. Run the test (by applying a patch test/Makefile should have been edited)
 make test
 
+Alternatively to points 2 and 3, you can run the run.sh script with the name of the exercise as an argument
+(assuming that your folder structure is tests/<name>/<name>.src), which automatically compiles the compiler
+and runs the file with mace for you.
 
 ----------------------------------------------------------
 Create a new patch file

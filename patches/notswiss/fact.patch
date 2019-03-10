@@ -1,0 +1,4487 @@
+diff --git a/Acse.output b/Acse.output
+new file mode 100644
+index 0000000..0b68250
+--- /dev/null
++++ b/Acse.output
+@@ -0,0 +1,2230 @@
++Terminals unused in grammar
++
++   COLON
++   MOD_OP
++   FOR
++   NOT
++
++
++State 20 conflicts: 1 shift/reduce
++State 65 conflicts: 1 shift/reduce
++State 96 conflicts: 1 shift/reduce
++State 97 conflicts: 1 shift/reduce
++State 98 conflicts: 1 shift/reduce
++State 99 conflicts: 1 shift/reduce
++State 100 conflicts: 1 shift/reduce
++State 101 conflicts: 1 shift/reduce
++State 102 conflicts: 1 shift/reduce
++State 103 conflicts: 1 shift/reduce
++State 104 conflicts: 1 shift/reduce
++State 105 conflicts: 1 shift/reduce
++State 106 conflicts: 1 shift/reduce
++State 107 conflicts: 1 shift/reduce
++State 108 conflicts: 1 shift/reduce
++State 109 conflicts: 1 shift/reduce
++State 110 conflicts: 1 shift/reduce
++State 111 conflicts: 1 shift/reduce
++
++
++Grammar
++
++    0 $accept: program $end
++
++    1 program: var_declarations statements
++
++    2 var_declarations: var_declarations var_declaration
++    3                 | %empty
++
++    4 var_declaration: TYPE declaration_list SEMI
++
++    5 declaration_list: declaration_list COMMA declaration
++    6                 | declaration
++
++    7 declaration: IDENTIFIER ASSIGN NUMBER
++    8            | IDENTIFIER LSQUARE NUMBER RSQUARE
++    9            | IDENTIFIER
++
++   10 code_block: statement
++   11           | LBRACE statements RBRACE
++
++   12 statements: statements statement
++   13           | statement
++
++   14 statement: assign_statement SEMI
++   15          | control_statement
++   16          | read_write_statement SEMI
++   17          | SEMI
++
++   18 control_statement: if_statement
++   19                  | while_statement
++   20                  | do_while_statement SEMI
++   21                  | return_statement SEMI
++
++   22 read_write_statement: read_statement
++   23                     | write_statement
++
++   24 assign_statement: IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
++   25                 | IDENTIFIER ASSIGN exp
++
++   26 if_statement: if_stmt
++
++   27 $@1: %empty
++
++   28 if_statement: if_stmt ELSE $@1 code_block
++
++   29 $@2: %empty
++
++   30 $@3: %empty
++
++   31 if_stmt: IF $@2 LPAR exp RPAR $@3 code_block
++
++   32 $@4: %empty
++
++   33 $@5: %empty
++
++   34 while_statement: WHILE $@4 LPAR exp RPAR $@5 code_block
++
++   35 $@6: %empty
++
++   36 do_while_statement: DO $@6 code_block WHILE LPAR exp RPAR
++
++   37 return_statement: RETURN
++
++   38 read_statement: READ LPAR IDENTIFIER RPAR
++
++   39 write_statement: WRITE LPAR exp RPAR
++
++   40 exp: exp NOT_OP
++   41    | NUMBER
++   42    | IDENTIFIER
++   43    | IDENTIFIER LSQUARE exp RSQUARE
++   44    | NOT_OP NUMBER
++   45    | NOT_OP IDENTIFIER
++   46    | exp AND_OP exp
++   47    | exp OR_OP exp
++   48    | exp PLUS exp
++   49    | exp MINUS exp
++   50    | exp MUL_OP exp
++   51    | exp DIV_OP exp
++   52    | exp LT exp
++   53    | exp GT exp
++   54    | exp EQ exp
++   55    | exp NOTEQ exp
++   56    | exp LTEQ exp
++   57    | exp GTEQ exp
++   58    | exp SHL_OP exp
++   59    | exp SHR_OP exp
++   60    | exp ANDAND exp
++   61    | exp OROR exp
++   62    | LPAR exp RPAR
++   63    | MINUS exp
++
++
++Terminals, with rules where they appear
++
++$end (0) 0
++error (256)
++NOT_OP (258) 40 44 45
++LBRACE (259) 11
++RBRACE (260) 11
++LPAR (261) 31 34 36 38 39 62
++RPAR (262) 31 34 36 38 39 62
++LSQUARE (263) 8 24 43
++RSQUARE (264) 8 24 43
++SEMI (265) 4 14 16 17 20 21
++COLON (266)
++PLUS (267) 48
++MINUS (268) 49 63
++MUL_OP (269) 50
++DIV_OP (270) 51
++MOD_OP (271)
++AND_OP (272) 46
++OR_OP (273) 47
++ASSIGN (274) 7 24 25
++LT (275) 52
++GT (276) 53
++SHL_OP (277) 58
++SHR_OP (278) 59
++EQ (279) 54
++NOTEQ (280) 55
++LTEQ (281) 56
++GTEQ (282) 57
++ANDAND (283) 60
++OROR (284) 61
++COMMA (285) 5
++FOR (286)
++RETURN (287) 37
++READ (288) 38
++WRITE (289) 39
++DO (290) 36
++WHILE (291) 34 36
++IF (292) 31
++ELSE (293) 28
++TYPE (294) 4
++IDENTIFIER (295) 7 8 9 24 25 38 42 43 45
++NUMBER (296) 7 8 41 44
++NOT (297)
++
++
++Nonterminals, with rules where they appear
++
++$accept (43)
++    on left: 0
++program (44)
++    on left: 1, on right: 0
++var_declarations (45)
++    on left: 2 3, on right: 1 2
++var_declaration (46)
++    on left: 4, on right: 2
++declaration_list (47)
++    on left: 5 6, on right: 4 5
++declaration (48)
++    on left: 7 8 9, on right: 5 6
++code_block (49)
++    on left: 10 11, on right: 28 31 34 36
++statements (50)
++    on left: 12 13, on right: 1 11 12
++statement (51)
++    on left: 14 15 16 17, on right: 10 12 13
++control_statement (52)
++    on left: 18 19 20 21, on right: 15
++read_write_statement (53)
++    on left: 22 23, on right: 16
++assign_statement (54)
++    on left: 24 25, on right: 14
++if_statement (55)
++    on left: 26 28, on right: 18
++$@1 (56)
++    on left: 27, on right: 28
++if_stmt (57)
++    on left: 31, on right: 26 28
++$@2 (58)
++    on left: 29, on right: 31
++$@3 (59)
++    on left: 30, on right: 31
++while_statement (60)
++    on left: 34, on right: 19
++$@4 (61)
++    on left: 32, on right: 34
++$@5 (62)
++    on left: 33, on right: 34
++do_while_statement (63)
++    on left: 36, on right: 20
++$@6 (64)
++    on left: 35, on right: 36
++return_statement (65)
++    on left: 37, on right: 21
++read_statement (66)
++    on left: 38, on right: 22
++write_statement (67)
++    on left: 39, on right: 23
++exp (68)
++    on left: 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57
++    58 59 60 61 62 63, on right: 24 25 31 34 36 39 40 43 46 47 48 49
++    50 51 52 53 54 55 56 57 58 59 60 61 62 63
++
++
++State 0
++
++    0 $accept: . program $end
++
++    $default  reduce using rule 3 (var_declarations)
++
++    program           go to state 1
++    var_declarations  go to state 2
++
++
++State 1
++
++    0 $accept: program . $end
++
++    $end  shift, and go to state 3
++
++
++State 2
++
++    1 program: var_declarations . statements
++    2 var_declarations: var_declarations . var_declaration
++
++    SEMI        shift, and go to state 4
++    RETURN      shift, and go to state 5
++    READ        shift, and go to state 6
++    WRITE       shift, and go to state 7
++    DO          shift, and go to state 8
++    WHILE       shift, and go to state 9
++    IF          shift, and go to state 10
++    TYPE        shift, and go to state 11
++    IDENTIFIER  shift, and go to state 12
++
++    var_declaration       go to state 13
++    statements            go to state 14
++    statement             go to state 15
++    control_statement     go to state 16
++    read_write_statement  go to state 17
++    assign_statement      go to state 18
++    if_statement          go to state 19
++    if_stmt               go to state 20
++    while_statement       go to state 21
++    do_while_statement    go to state 22
++    return_statement      go to state 23
++    read_statement        go to state 24
++    write_statement       go to state 25
++
++
++State 3
++
++    0 $accept: program $end .
++
++    $default  accept
++
++
++State 4
++
++   17 statement: SEMI .
++
++    $default  reduce using rule 17 (statement)
++
++
++State 5
++
++   37 return_statement: RETURN .
++
++    $default  reduce using rule 37 (return_statement)
++
++
++State 6
++
++   38 read_statement: READ . LPAR IDENTIFIER RPAR
++
++    LPAR  shift, and go to state 26
++
++
++State 7
++
++   39 write_statement: WRITE . LPAR exp RPAR
++
++    LPAR  shift, and go to state 27
++
++
++State 8
++
++   36 do_while_statement: DO . $@6 code_block WHILE LPAR exp RPAR
++
++    $default  reduce using rule 35 ($@6)
++
++    $@6  go to state 28
++
++
++State 9
++
++   34 while_statement: WHILE . $@4 LPAR exp RPAR $@5 code_block
++
++    $default  reduce using rule 32 ($@4)
++
++    $@4  go to state 29
++
++
++State 10
++
++   31 if_stmt: IF . $@2 LPAR exp RPAR $@3 code_block
++
++    $default  reduce using rule 29 ($@2)
++
++    $@2  go to state 30
++
++
++State 11
++
++    4 var_declaration: TYPE . declaration_list SEMI
++
++    IDENTIFIER  shift, and go to state 31
++
++    declaration_list  go to state 32
++    declaration       go to state 33
++
++
++State 12
++
++   24 assign_statement: IDENTIFIER . LSQUARE exp RSQUARE ASSIGN exp
++   25                 | IDENTIFIER . ASSIGN exp
++
++    LSQUARE  shift, and go to state 34
++    ASSIGN   shift, and go to state 35
++
++
++State 13
++
++    2 var_declarations: var_declarations var_declaration .
++
++    $default  reduce using rule 2 (var_declarations)
++
++
++State 14
++
++    1 program: var_declarations statements .
++   12 statements: statements . statement
++
++    SEMI        shift, and go to state 4
++    RETURN      shift, and go to state 5
++    READ        shift, and go to state 6
++    WRITE       shift, and go to state 7
++    DO          shift, and go to state 8
++    WHILE       shift, and go to state 9
++    IF          shift, and go to state 10
++    IDENTIFIER  shift, and go to state 12
++
++    $default  reduce using rule 1 (program)
++
++    statement             go to state 36
++    control_statement     go to state 16
++    read_write_statement  go to state 17
++    assign_statement      go to state 18
++    if_statement          go to state 19
++    if_stmt               go to state 20
++    while_statement       go to state 21
++    do_while_statement    go to state 22
++    return_statement      go to state 23
++    read_statement        go to state 24
++    write_statement       go to state 25
++
++
++State 15
++
++   13 statements: statement .
++
++    $default  reduce using rule 13 (statements)
++
++
++State 16
++
++   15 statement: control_statement .
++
++    $default  reduce using rule 15 (statement)
++
++
++State 17
++
++   16 statement: read_write_statement . SEMI
++
++    SEMI  shift, and go to state 37
++
++
++State 18
++
++   14 statement: assign_statement . SEMI
++
++    SEMI  shift, and go to state 38
++
++
++State 19
++
++   18 control_statement: if_statement .
++
++    $default  reduce using rule 18 (control_statement)
++
++
++State 20
++
++   26 if_statement: if_stmt .
++   28             | if_stmt . ELSE $@1 code_block
++
++    ELSE  shift, and go to state 39
++
++    ELSE      [reduce using rule 26 (if_statement)]
++    $default  reduce using rule 26 (if_statement)
++
++
++State 21
++
++   19 control_statement: while_statement .
++
++    $default  reduce using rule 19 (control_statement)
++
++
++State 22
++
++   20 control_statement: do_while_statement . SEMI
++
++    SEMI  shift, and go to state 40
++
++
++State 23
++
++   21 control_statement: return_statement . SEMI
++
++    SEMI  shift, and go to state 41
++
++
++State 24
++
++   22 read_write_statement: read_statement .
++
++    $default  reduce using rule 22 (read_write_statement)
++
++
++State 25
++
++   23 read_write_statement: write_statement .
++
++    $default  reduce using rule 23 (read_write_statement)
++
++
++State 26
++
++   38 read_statement: READ LPAR . IDENTIFIER RPAR
++
++    IDENTIFIER  shift, and go to state 42
++
++
++State 27
++
++   39 write_statement: WRITE LPAR . exp RPAR
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 48
++
++
++State 28
++
++   36 do_while_statement: DO $@6 . code_block WHILE LPAR exp RPAR
++
++    LBRACE      shift, and go to state 49
++    SEMI        shift, and go to state 4
++    RETURN      shift, and go to state 5
++    READ        shift, and go to state 6
++    WRITE       shift, and go to state 7
++    DO          shift, and go to state 8
++    WHILE       shift, and go to state 9
++    IF          shift, and go to state 10
++    IDENTIFIER  shift, and go to state 12
++
++    code_block            go to state 50
++    statement             go to state 51
++    control_statement     go to state 16
++    read_write_statement  go to state 17
++    assign_statement      go to state 18
++    if_statement          go to state 19
++    if_stmt               go to state 20
++    while_statement       go to state 21
++    do_while_statement    go to state 22
++    return_statement      go to state 23
++    read_statement        go to state 24
++    write_statement       go to state 25
++
++
++State 29
++
++   34 while_statement: WHILE $@4 . LPAR exp RPAR $@5 code_block
++
++    LPAR  shift, and go to state 52
++
++
++State 30
++
++   31 if_stmt: IF $@2 . LPAR exp RPAR $@3 code_block
++
++    LPAR  shift, and go to state 53
++
++
++State 31
++
++    7 declaration: IDENTIFIER . ASSIGN NUMBER
++    8            | IDENTIFIER . LSQUARE NUMBER RSQUARE
++    9            | IDENTIFIER .
++
++    LSQUARE  shift, and go to state 54
++    ASSIGN   shift, and go to state 55
++
++    $default  reduce using rule 9 (declaration)
++
++
++State 32
++
++    4 var_declaration: TYPE declaration_list . SEMI
++    5 declaration_list: declaration_list . COMMA declaration
++
++    SEMI   shift, and go to state 56
++    COMMA  shift, and go to state 57
++
++
++State 33
++
++    6 declaration_list: declaration .
++
++    $default  reduce using rule 6 (declaration_list)
++
++
++State 34
++
++   24 assign_statement: IDENTIFIER LSQUARE . exp RSQUARE ASSIGN exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 58
++
++
++State 35
++
++   25 assign_statement: IDENTIFIER ASSIGN . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 59
++
++
++State 36
++
++   12 statements: statements statement .
++
++    $default  reduce using rule 12 (statements)
++
++
++State 37
++
++   16 statement: read_write_statement SEMI .
++
++    $default  reduce using rule 16 (statement)
++
++
++State 38
++
++   14 statement: assign_statement SEMI .
++
++    $default  reduce using rule 14 (statement)
++
++
++State 39
++
++   28 if_statement: if_stmt ELSE . $@1 code_block
++
++    $default  reduce using rule 27 ($@1)
++
++    $@1  go to state 60
++
++
++State 40
++
++   20 control_statement: do_while_statement SEMI .
++
++    $default  reduce using rule 20 (control_statement)
++
++
++State 41
++
++   21 control_statement: return_statement SEMI .
++
++    $default  reduce using rule 21 (control_statement)
++
++
++State 42
++
++   38 read_statement: READ LPAR IDENTIFIER . RPAR
++
++    RPAR  shift, and go to state 61
++
++
++State 43
++
++   44 exp: NOT_OP . NUMBER
++   45    | NOT_OP . IDENTIFIER
++
++    IDENTIFIER  shift, and go to state 62
++    NUMBER      shift, and go to state 63
++
++
++State 44
++
++   62 exp: LPAR . exp RPAR
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 64
++
++
++State 45
++
++   63 exp: MINUS . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 65
++
++
++State 46
++
++   42 exp: IDENTIFIER .
++   43    | IDENTIFIER . LSQUARE exp RSQUARE
++
++    LSQUARE  shift, and go to state 66
++
++    $default  reduce using rule 42 (exp)
++
++
++State 47
++
++   41 exp: NUMBER .
++
++    $default  reduce using rule 41 (exp)
++
++
++State 48
++
++   39 write_statement: WRITE LPAR exp . RPAR
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    RPAR    shift, and go to state 68
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    AND_OP  shift, and go to state 73
++    OR_OP   shift, and go to state 74
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++    ANDAND  shift, and go to state 83
++    OROR    shift, and go to state 84
++
++
++State 49
++
++   11 code_block: LBRACE . statements RBRACE
++
++    SEMI        shift, and go to state 4
++    RETURN      shift, and go to state 5
++    READ        shift, and go to state 6
++    WRITE       shift, and go to state 7
++    DO          shift, and go to state 8
++    WHILE       shift, and go to state 9
++    IF          shift, and go to state 10
++    IDENTIFIER  shift, and go to state 12
++
++    statements            go to state 85
++    statement             go to state 15
++    control_statement     go to state 16
++    read_write_statement  go to state 17
++    assign_statement      go to state 18
++    if_statement          go to state 19
++    if_stmt               go to state 20
++    while_statement       go to state 21
++    do_while_statement    go to state 22
++    return_statement      go to state 23
++    read_statement        go to state 24
++    write_statement       go to state 25
++
++
++State 50
++
++   36 do_while_statement: DO $@6 code_block . WHILE LPAR exp RPAR
++
++    WHILE  shift, and go to state 86
++
++
++State 51
++
++   10 code_block: statement .
++
++    $default  reduce using rule 10 (code_block)
++
++
++State 52
++
++   34 while_statement: WHILE $@4 LPAR . exp RPAR $@5 code_block
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 87
++
++
++State 53
++
++   31 if_stmt: IF $@2 LPAR . exp RPAR $@3 code_block
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 88
++
++
++State 54
++
++    8 declaration: IDENTIFIER LSQUARE . NUMBER RSQUARE
++
++    NUMBER  shift, and go to state 89
++
++
++State 55
++
++    7 declaration: IDENTIFIER ASSIGN . NUMBER
++
++    NUMBER  shift, and go to state 90
++
++
++State 56
++
++    4 var_declaration: TYPE declaration_list SEMI .
++
++    $default  reduce using rule 4 (var_declaration)
++
++
++State 57
++
++    5 declaration_list: declaration_list COMMA . declaration
++
++    IDENTIFIER  shift, and go to state 31
++
++    declaration  go to state 91
++
++
++State 58
++
++   24 assign_statement: IDENTIFIER LSQUARE exp . RSQUARE ASSIGN exp
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP   shift, and go to state 67
++    RSQUARE  shift, and go to state 92
++    PLUS     shift, and go to state 69
++    MINUS    shift, and go to state 70
++    MUL_OP   shift, and go to state 71
++    DIV_OP   shift, and go to state 72
++    AND_OP   shift, and go to state 73
++    OR_OP    shift, and go to state 74
++    LT       shift, and go to state 75
++    GT       shift, and go to state 76
++    SHL_OP   shift, and go to state 77
++    SHR_OP   shift, and go to state 78
++    EQ       shift, and go to state 79
++    NOTEQ    shift, and go to state 80
++    LTEQ     shift, and go to state 81
++    GTEQ     shift, and go to state 82
++    ANDAND   shift, and go to state 83
++    OROR     shift, and go to state 84
++
++
++State 59
++
++   25 assign_statement: IDENTIFIER ASSIGN exp .
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    AND_OP  shift, and go to state 73
++    OR_OP   shift, and go to state 74
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++    ANDAND  shift, and go to state 83
++    OROR    shift, and go to state 84
++
++    $default  reduce using rule 25 (assign_statement)
++
++
++State 60
++
++   28 if_statement: if_stmt ELSE $@1 . code_block
++
++    LBRACE      shift, and go to state 49
++    SEMI        shift, and go to state 4
++    RETURN      shift, and go to state 5
++    READ        shift, and go to state 6
++    WRITE       shift, and go to state 7
++    DO          shift, and go to state 8
++    WHILE       shift, and go to state 9
++    IF          shift, and go to state 10
++    IDENTIFIER  shift, and go to state 12
++
++    code_block            go to state 93
++    statement             go to state 51
++    control_statement     go to state 16
++    read_write_statement  go to state 17
++    assign_statement      go to state 18
++    if_statement          go to state 19
++    if_stmt               go to state 20
++    while_statement       go to state 21
++    do_while_statement    go to state 22
++    return_statement      go to state 23
++    read_statement        go to state 24
++    write_statement       go to state 25
++
++
++State 61
++
++   38 read_statement: READ LPAR IDENTIFIER RPAR .
++
++    $default  reduce using rule 38 (read_statement)
++
++
++State 62
++
++   45 exp: NOT_OP IDENTIFIER .
++
++    $default  reduce using rule 45 (exp)
++
++
++State 63
++
++   44 exp: NOT_OP NUMBER .
++
++    $default  reduce using rule 44 (exp)
++
++
++State 64
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++   62    | LPAR exp . RPAR
++
++    NOT_OP  shift, and go to state 67
++    RPAR    shift, and go to state 94
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    AND_OP  shift, and go to state 73
++    OR_OP   shift, and go to state 74
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++    ANDAND  shift, and go to state 83
++    OROR    shift, and go to state 84
++
++
++State 65
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++   63    | MINUS exp .
++
++    NOT_OP  shift, and go to state 67
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++
++    NOT_OP    [reduce using rule 63 (exp)]
++    $default  reduce using rule 63 (exp)
++
++
++State 66
++
++   43 exp: IDENTIFIER LSQUARE . exp RSQUARE
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 95
++
++
++State 67
++
++   40 exp: exp NOT_OP .
++
++    $default  reduce using rule 40 (exp)
++
++
++State 68
++
++   39 write_statement: WRITE LPAR exp RPAR .
++
++    $default  reduce using rule 39 (write_statement)
++
++
++State 69
++
++   48 exp: exp PLUS . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 96
++
++
++State 70
++
++   49 exp: exp MINUS . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 97
++
++
++State 71
++
++   50 exp: exp MUL_OP . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 98
++
++
++State 72
++
++   51 exp: exp DIV_OP . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 99
++
++
++State 73
++
++   46 exp: exp AND_OP . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 100
++
++
++State 74
++
++   47 exp: exp OR_OP . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 101
++
++
++State 75
++
++   52 exp: exp LT . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 102
++
++
++State 76
++
++   53 exp: exp GT . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 103
++
++
++State 77
++
++   58 exp: exp SHL_OP . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 104
++
++
++State 78
++
++   59 exp: exp SHR_OP . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 105
++
++
++State 79
++
++   54 exp: exp EQ . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 106
++
++
++State 80
++
++   55 exp: exp NOTEQ . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 107
++
++
++State 81
++
++   56 exp: exp LTEQ . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 108
++
++
++State 82
++
++   57 exp: exp GTEQ . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 109
++
++
++State 83
++
++   60 exp: exp ANDAND . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 110
++
++
++State 84
++
++   61 exp: exp OROR . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 111
++
++
++State 85
++
++   11 code_block: LBRACE statements . RBRACE
++   12 statements: statements . statement
++
++    RBRACE      shift, and go to state 112
++    SEMI        shift, and go to state 4
++    RETURN      shift, and go to state 5
++    READ        shift, and go to state 6
++    WRITE       shift, and go to state 7
++    DO          shift, and go to state 8
++    WHILE       shift, and go to state 9
++    IF          shift, and go to state 10
++    IDENTIFIER  shift, and go to state 12
++
++    statement             go to state 36
++    control_statement     go to state 16
++    read_write_statement  go to state 17
++    assign_statement      go to state 18
++    if_statement          go to state 19
++    if_stmt               go to state 20
++    while_statement       go to state 21
++    do_while_statement    go to state 22
++    return_statement      go to state 23
++    read_statement        go to state 24
++    write_statement       go to state 25
++
++
++State 86
++
++   36 do_while_statement: DO $@6 code_block WHILE . LPAR exp RPAR
++
++    LPAR  shift, and go to state 113
++
++
++State 87
++
++   34 while_statement: WHILE $@4 LPAR exp . RPAR $@5 code_block
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    RPAR    shift, and go to state 114
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    AND_OP  shift, and go to state 73
++    OR_OP   shift, and go to state 74
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++    ANDAND  shift, and go to state 83
++    OROR    shift, and go to state 84
++
++
++State 88
++
++   31 if_stmt: IF $@2 LPAR exp . RPAR $@3 code_block
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    RPAR    shift, and go to state 115
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    AND_OP  shift, and go to state 73
++    OR_OP   shift, and go to state 74
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++    ANDAND  shift, and go to state 83
++    OROR    shift, and go to state 84
++
++
++State 89
++
++    8 declaration: IDENTIFIER LSQUARE NUMBER . RSQUARE
++
++    RSQUARE  shift, and go to state 116
++
++
++State 90
++
++    7 declaration: IDENTIFIER ASSIGN NUMBER .
++
++    $default  reduce using rule 7 (declaration)
++
++
++State 91
++
++    5 declaration_list: declaration_list COMMA declaration .
++
++    $default  reduce using rule 5 (declaration_list)
++
++
++State 92
++
++   24 assign_statement: IDENTIFIER LSQUARE exp RSQUARE . ASSIGN exp
++
++    ASSIGN  shift, and go to state 117
++
++
++State 93
++
++   28 if_statement: if_stmt ELSE $@1 code_block .
++
++    $default  reduce using rule 28 (if_statement)
++
++
++State 94
++
++   62 exp: LPAR exp RPAR .
++
++    $default  reduce using rule 62 (exp)
++
++
++State 95
++
++   40 exp: exp . NOT_OP
++   43    | IDENTIFIER LSQUARE exp . RSQUARE
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP   shift, and go to state 67
++    RSQUARE  shift, and go to state 118
++    PLUS     shift, and go to state 69
++    MINUS    shift, and go to state 70
++    MUL_OP   shift, and go to state 71
++    DIV_OP   shift, and go to state 72
++    AND_OP   shift, and go to state 73
++    OR_OP    shift, and go to state 74
++    LT       shift, and go to state 75
++    GT       shift, and go to state 76
++    SHL_OP   shift, and go to state 77
++    SHR_OP   shift, and go to state 78
++    EQ       shift, and go to state 79
++    NOTEQ    shift, and go to state 80
++    LTEQ     shift, and go to state 81
++    GTEQ     shift, and go to state 82
++    ANDAND   shift, and go to state 83
++    OROR     shift, and go to state 84
++
++
++State 96
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   48    | exp PLUS exp .
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++
++    NOT_OP    [reduce using rule 48 (exp)]
++    $default  reduce using rule 48 (exp)
++
++
++State 97
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   49    | exp MINUS exp .
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++
++    NOT_OP    [reduce using rule 49 (exp)]
++    $default  reduce using rule 49 (exp)
++
++
++State 98
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   50    | exp MUL_OP exp .
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++
++    NOT_OP    [reduce using rule 50 (exp)]
++    $default  reduce using rule 50 (exp)
++
++
++State 99
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   51    | exp DIV_OP exp .
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++
++    NOT_OP    [reduce using rule 51 (exp)]
++    $default  reduce using rule 51 (exp)
++
++
++State 100
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   46    | exp AND_OP exp .
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++
++    NOT_OP    [reduce using rule 46 (exp)]
++    $default  reduce using rule 46 (exp)
++
++
++State 101
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   47    | exp OR_OP exp .
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    AND_OP  shift, and go to state 73
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++
++    NOT_OP    [reduce using rule 47 (exp)]
++    $default  reduce using rule 47 (exp)
++
++
++State 102
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   52    | exp LT exp .
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++
++    NOT_OP    [reduce using rule 52 (exp)]
++    $default  reduce using rule 52 (exp)
++
++
++State 103
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   53    | exp GT exp .
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++
++    NOT_OP    [reduce using rule 53 (exp)]
++    $default  reduce using rule 53 (exp)
++
++
++State 104
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   58    | exp SHL_OP exp .
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++
++    NOT_OP    [reduce using rule 58 (exp)]
++    $default  reduce using rule 58 (exp)
++
++
++State 105
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   59    | exp SHR_OP exp .
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++
++    NOT_OP    [reduce using rule 59 (exp)]
++    $default  reduce using rule 59 (exp)
++
++
++State 106
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   54    | exp EQ exp .
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++
++    NOT_OP    [reduce using rule 54 (exp)]
++    $default  reduce using rule 54 (exp)
++
++
++State 107
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   55    | exp NOTEQ exp .
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++
++    NOT_OP    [reduce using rule 55 (exp)]
++    $default  reduce using rule 55 (exp)
++
++
++State 108
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   56    | exp LTEQ exp .
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++
++    NOT_OP    [reduce using rule 56 (exp)]
++    $default  reduce using rule 56 (exp)
++
++
++State 109
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   57    | exp GTEQ exp .
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++
++    NOT_OP    [reduce using rule 57 (exp)]
++    $default  reduce using rule 57 (exp)
++
++
++State 110
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   60    | exp ANDAND exp .
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    AND_OP  shift, and go to state 73
++    OR_OP   shift, and go to state 74
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++
++    NOT_OP    [reduce using rule 60 (exp)]
++    $default  reduce using rule 60 (exp)
++
++
++State 111
++
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++   61    | exp OROR exp .
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    AND_OP  shift, and go to state 73
++    OR_OP   shift, and go to state 74
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++    ANDAND  shift, and go to state 83
++
++    NOT_OP    [reduce using rule 61 (exp)]
++    $default  reduce using rule 61 (exp)
++
++
++State 112
++
++   11 code_block: LBRACE statements RBRACE .
++
++    $default  reduce using rule 11 (code_block)
++
++
++State 113
++
++   36 do_while_statement: DO $@6 code_block WHILE LPAR . exp RPAR
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 119
++
++
++State 114
++
++   34 while_statement: WHILE $@4 LPAR exp RPAR . $@5 code_block
++
++    $default  reduce using rule 33 ($@5)
++
++    $@5  go to state 120
++
++
++State 115
++
++   31 if_stmt: IF $@2 LPAR exp RPAR . $@3 code_block
++
++    $default  reduce using rule 30 ($@3)
++
++    $@3  go to state 121
++
++
++State 116
++
++    8 declaration: IDENTIFIER LSQUARE NUMBER RSQUARE .
++
++    $default  reduce using rule 8 (declaration)
++
++
++State 117
++
++   24 assign_statement: IDENTIFIER LSQUARE exp RSQUARE ASSIGN . exp
++
++    NOT_OP      shift, and go to state 43
++    LPAR        shift, and go to state 44
++    MINUS       shift, and go to state 45
++    IDENTIFIER  shift, and go to state 46
++    NUMBER      shift, and go to state 47
++
++    exp  go to state 122
++
++
++State 118
++
++   43 exp: IDENTIFIER LSQUARE exp RSQUARE .
++
++    $default  reduce using rule 43 (exp)
++
++
++State 119
++
++   36 do_while_statement: DO $@6 code_block WHILE LPAR exp . RPAR
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    RPAR    shift, and go to state 123
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    AND_OP  shift, and go to state 73
++    OR_OP   shift, and go to state 74
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++    ANDAND  shift, and go to state 83
++    OROR    shift, and go to state 84
++
++
++State 120
++
++   34 while_statement: WHILE $@4 LPAR exp RPAR $@5 . code_block
++
++    LBRACE      shift, and go to state 49
++    SEMI        shift, and go to state 4
++    RETURN      shift, and go to state 5
++    READ        shift, and go to state 6
++    WRITE       shift, and go to state 7
++    DO          shift, and go to state 8
++    WHILE       shift, and go to state 9
++    IF          shift, and go to state 10
++    IDENTIFIER  shift, and go to state 12
++
++    code_block            go to state 124
++    statement             go to state 51
++    control_statement     go to state 16
++    read_write_statement  go to state 17
++    assign_statement      go to state 18
++    if_statement          go to state 19
++    if_stmt               go to state 20
++    while_statement       go to state 21
++    do_while_statement    go to state 22
++    return_statement      go to state 23
++    read_statement        go to state 24
++    write_statement       go to state 25
++
++
++State 121
++
++   31 if_stmt: IF $@2 LPAR exp RPAR $@3 . code_block
++
++    LBRACE      shift, and go to state 49
++    SEMI        shift, and go to state 4
++    RETURN      shift, and go to state 5
++    READ        shift, and go to state 6
++    WRITE       shift, and go to state 7
++    DO          shift, and go to state 8
++    WHILE       shift, and go to state 9
++    IF          shift, and go to state 10
++    IDENTIFIER  shift, and go to state 12
++
++    code_block            go to state 125
++    statement             go to state 51
++    control_statement     go to state 16
++    read_write_statement  go to state 17
++    assign_statement      go to state 18
++    if_statement          go to state 19
++    if_stmt               go to state 20
++    while_statement       go to state 21
++    do_while_statement    go to state 22
++    return_statement      go to state 23
++    read_statement        go to state 24
++    write_statement       go to state 25
++
++
++State 122
++
++   24 assign_statement: IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp .
++   40 exp: exp . NOT_OP
++   46    | exp . AND_OP exp
++   47    | exp . OR_OP exp
++   48    | exp . PLUS exp
++   49    | exp . MINUS exp
++   50    | exp . MUL_OP exp
++   51    | exp . DIV_OP exp
++   52    | exp . LT exp
++   53    | exp . GT exp
++   54    | exp . EQ exp
++   55    | exp . NOTEQ exp
++   56    | exp . LTEQ exp
++   57    | exp . GTEQ exp
++   58    | exp . SHL_OP exp
++   59    | exp . SHR_OP exp
++   60    | exp . ANDAND exp
++   61    | exp . OROR exp
++
++    NOT_OP  shift, and go to state 67
++    PLUS    shift, and go to state 69
++    MINUS   shift, and go to state 70
++    MUL_OP  shift, and go to state 71
++    DIV_OP  shift, and go to state 72
++    AND_OP  shift, and go to state 73
++    OR_OP   shift, and go to state 74
++    LT      shift, and go to state 75
++    GT      shift, and go to state 76
++    SHL_OP  shift, and go to state 77
++    SHR_OP  shift, and go to state 78
++    EQ      shift, and go to state 79
++    NOTEQ   shift, and go to state 80
++    LTEQ    shift, and go to state 81
++    GTEQ    shift, and go to state 82
++    ANDAND  shift, and go to state 83
++    OROR    shift, and go to state 84
++
++    $default  reduce using rule 24 (assign_statement)
++
++
++State 123
++
++   36 do_while_statement: DO $@6 code_block WHILE LPAR exp RPAR .
++
++    $default  reduce using rule 36 (do_while_statement)
++
++
++State 124
++
++   34 while_statement: WHILE $@4 LPAR exp RPAR $@5 code_block .
++
++    $default  reduce using rule 34 (while_statement)
++
++
++State 125
++
++   31 if_stmt: IF $@2 LPAR exp RPAR $@3 code_block .
++
++    $default  reduce using rule 31 (if_stmt)
+diff --git a/acse/Acse.output b/acse/Acse.output
+deleted file mode 100644
+index 81042eb..0000000
+--- a/acse/Acse.output
++++ /dev/null
+@@ -1,2134 +0,0 @@
+-Terminals which are not used
+-
+-   COLON
+-   MOD_OP
+-   FOR
+-   NOT
+-
+-
+-State 25 conflicts: 1 shift/reduce
+-
+-
+-Grammar
+-
+-    0 $accept: program $end
+-
+-    1 program: var_declarations statements
+-
+-    2 var_declarations: var_declarations var_declaration
+-    3                 | /* empty */
+-
+-    4 var_declaration: TYPE declaration_list SEMI
+-
+-    5 declaration_list: declaration_list COMMA declaration
+-    6                 | declaration
+-
+-    7 declaration: IDENTIFIER ASSIGN NUMBER
+-    8            | IDENTIFIER LSQUARE NUMBER RSQUARE
+-    9            | IDENTIFIER
+-
+-   10 code_block: statement
+-   11           | LBRACE statements RBRACE
+-
+-   12 statements: statements statement
+-   13           | statement
+-
+-   14 statement: assign_statement SEMI
+-   15          | control_statement
+-   16          | read_write_statement SEMI
+-   17          | SEMI
+-
+-   18 control_statement: if_statement
+-   19                  | do_while_statement SEMI
+-   20                  | while_statement
+-   21                  | return_statement SEMI
+-
+-   22 read_write_statement: read_statement
+-   23                     | write_statement
+-
+-   24 assign_statement: IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
+-   25                 | IDENTIFIER ASSIGN exp
+-
+-   26 if_statement: if_stmt
+-
+-   27 @1: /* empty */
+-
+-   28 if_statement: if_stmt ELSE @1 code_block
+-
+-   29 return_statement: RETURN
+-
+-   30 read_statement: READ LPAR IDENTIFIER RPAR
+-
+-   31 write_statement: WRITE LPAR exp RPAR
+-
+-   32 @2: /* empty */
+-
+-   33 @3: /* empty */
+-
+-   34 while_statement: WHILE @2 LPAR exp RPAR @3 code_block
+-
+-   35 @4: /* empty */
+-
+-   36 do_while_statement: DO @4 code_block WHILE LPAR exp RPAR
+-
+-   37 @5: /* empty */
+-
+-   38 @6: /* empty */
+-
+-   39 if_stmt: IF @5 LPAR exp RPAR @6 code_block
+-
+-   40 exp: NUMBER
+-   41    | IDENTIFIER
+-   42    | IDENTIFIER LSQUARE exp RSQUARE
+-   43    | NOT_OP NUMBER
+-   44    | NOT_OP IDENTIFIER
+-   45    | exp AND_OP exp
+-   46    | exp OR_OP exp
+-   47    | exp PLUS exp
+-   48    | exp MINUS exp
+-   49    | exp MUL_OP exp
+-   50    | exp DIV_OP exp
+-   51    | exp LT exp
+-   52    | exp GT exp
+-   53    | exp EQ exp
+-   54    | exp NOTEQ exp
+-   55    | exp LTEQ exp
+-   56    | exp GTEQ exp
+-   57    | exp SHL_OP exp
+-   58    | exp SHR_OP exp
+-   59    | exp ANDAND exp
+-   60    | exp OROR exp
+-   61    | LPAR exp RPAR
+-   62    | MINUS exp
+-
+-
+-Terminals, with rules where they appear
+-
+-$end (0) 0
+-error (256)
+-LBRACE (258) 11
+-RBRACE (259) 11
+-LPAR (260) 30 31 34 36 39 61
+-RPAR (261) 30 31 34 36 39 61
+-LSQUARE (262) 8 24 42
+-RSQUARE (263) 8 24 42
+-SEMI (264) 4 14 16 17 19 21
+-COLON (265)
+-PLUS (266) 47
+-MINUS (267) 48 62
+-MUL_OP (268) 49
+-DIV_OP (269) 50
+-MOD_OP (270)
+-AND_OP (271) 45
+-OR_OP (272) 46
+-NOT_OP (273) 43 44
+-ASSIGN (274) 7 24 25
+-LT (275) 51
+-GT (276) 52
+-SHL_OP (277) 57
+-SHR_OP (278) 58
+-EQ (279) 53
+-NOTEQ (280) 54
+-LTEQ (281) 55
+-GTEQ (282) 56
+-ANDAND (283) 59
+-OROR (284) 60
+-COMMA (285) 5
+-ELSE (286) 28
+-FOR (287)
+-RETURN (288) 29
+-READ (289) 30
+-WRITE (290) 31
+-DO (291) 36
+-WHILE (292) 34 36
+-IF (293) 39
+-TYPE (294) 4
+-IDENTIFIER (295) 7 8 9 24 25 30 41 42 44
+-NUMBER (296) 7 8 40 43
+-NOT (297)
+-
+-
+-Nonterminals, with rules where they appear
+-
+-$accept (43)
+-    on left: 0
+-program (44)
+-    on left: 1, on right: 0
+-var_declarations (45)
+-    on left: 2 3, on right: 1 2
+-var_declaration (46)
+-    on left: 4, on right: 2
+-declaration_list (47)
+-    on left: 5 6, on right: 4 5
+-declaration (48)
+-    on left: 7 8 9, on right: 5 6
+-code_block (49)
+-    on left: 10 11, on right: 28 34 36 39
+-statements (50)
+-    on left: 12 13, on right: 1 11 12
+-statement (51)
+-    on left: 14 15 16 17, on right: 10 12 13
+-control_statement (52)
+-    on left: 18 19 20 21, on right: 15
+-read_write_statement (53)
+-    on left: 22 23, on right: 16
+-assign_statement (54)
+-    on left: 24 25, on right: 14
+-if_statement (55)
+-    on left: 26 28, on right: 18
+-@1 (56)
+-    on left: 27, on right: 28
+-return_statement (57)
+-    on left: 29, on right: 21
+-read_statement (58)
+-    on left: 30, on right: 22
+-write_statement (59)
+-    on left: 31, on right: 23
+-while_statement (60)
+-    on left: 34, on right: 20
+-@2 (61)
+-    on left: 32, on right: 34
+-@3 (62)
+-    on left: 33, on right: 34
+-do_while_statement (63)
+-    on left: 36, on right: 19
+-@4 (64)
+-    on left: 35, on right: 36
+-if_stmt (65)
+-    on left: 39, on right: 26 28
+-@5 (66)
+-    on left: 37, on right: 39
+-@6 (67)
+-    on left: 38, on right: 39
+-exp (68)
+-    on left: 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57
+-    58 59 60 61 62, on right: 24 25 31 34 36 39 42 45 46 47 48 49 50
+-    51 52 53 54 55 56 57 58 59 60 61 62
+-
+-
+-state 0
+-
+-    0 $accept: . program $end
+-
+-    $default  reduce using rule 3 (var_declarations)
+-
+-    program           go to state 1
+-    var_declarations  go to state 2
+-
+-
+-state 1
+-
+-    0 $accept: program . $end
+-
+-    $end  shift, and go to state 3
+-
+-
+-state 2
+-
+-    1 program: var_declarations . statements
+-    2 var_declarations: var_declarations . var_declaration
+-
+-    SEMI        shift, and go to state 4
+-    RETURN      shift, and go to state 5
+-    READ        shift, and go to state 6
+-    WRITE       shift, and go to state 7
+-    DO          shift, and go to state 8
+-    WHILE       shift, and go to state 9
+-    IF          shift, and go to state 10
+-    TYPE        shift, and go to state 11
+-    IDENTIFIER  shift, and go to state 12
+-
+-    var_declaration       go to state 13
+-    statements            go to state 14
+-    statement             go to state 15
+-    control_statement     go to state 16
+-    read_write_statement  go to state 17
+-    assign_statement      go to state 18
+-    if_statement          go to state 19
+-    return_statement      go to state 20
+-    read_statement        go to state 21
+-    write_statement       go to state 22
+-    while_statement       go to state 23
+-    do_while_statement    go to state 24
+-    if_stmt               go to state 25
+-
+-
+-state 3
+-
+-    0 $accept: program $end .
+-
+-    $default  accept
+-
+-
+-state 4
+-
+-   17 statement: SEMI .
+-
+-    $default  reduce using rule 17 (statement)
+-
+-
+-state 5
+-
+-   29 return_statement: RETURN .
+-
+-    $default  reduce using rule 29 (return_statement)
+-
+-
+-state 6
+-
+-   30 read_statement: READ . LPAR IDENTIFIER RPAR
+-
+-    LPAR  shift, and go to state 26
+-
+-
+-state 7
+-
+-   31 write_statement: WRITE . LPAR exp RPAR
+-
+-    LPAR  shift, and go to state 27
+-
+-
+-state 8
+-
+-   36 do_while_statement: DO . @4 code_block WHILE LPAR exp RPAR
+-
+-    $default  reduce using rule 35 (@4)
+-
+-    @4  go to state 28
+-
+-
+-state 9
+-
+-   34 while_statement: WHILE . @2 LPAR exp RPAR @3 code_block
+-
+-    $default  reduce using rule 32 (@2)
+-
+-    @2  go to state 29
+-
+-
+-state 10
+-
+-   39 if_stmt: IF . @5 LPAR exp RPAR @6 code_block
+-
+-    $default  reduce using rule 37 (@5)
+-
+-    @5  go to state 30
+-
+-
+-state 11
+-
+-    4 var_declaration: TYPE . declaration_list SEMI
+-
+-    IDENTIFIER  shift, and go to state 31
+-
+-    declaration_list  go to state 32
+-    declaration       go to state 33
+-
+-
+-state 12
+-
+-   24 assign_statement: IDENTIFIER . LSQUARE exp RSQUARE ASSIGN exp
+-   25                 | IDENTIFIER . ASSIGN exp
+-
+-    LSQUARE  shift, and go to state 34
+-    ASSIGN   shift, and go to state 35
+-
+-
+-state 13
+-
+-    2 var_declarations: var_declarations var_declaration .
+-
+-    $default  reduce using rule 2 (var_declarations)
+-
+-
+-state 14
+-
+-    1 program: var_declarations statements .
+-   12 statements: statements . statement
+-
+-    SEMI        shift, and go to state 4
+-    RETURN      shift, and go to state 5
+-    READ        shift, and go to state 6
+-    WRITE       shift, and go to state 7
+-    DO          shift, and go to state 8
+-    WHILE       shift, and go to state 9
+-    IF          shift, and go to state 10
+-    IDENTIFIER  shift, and go to state 12
+-
+-    $default  reduce using rule 1 (program)
+-
+-    statement             go to state 36
+-    control_statement     go to state 16
+-    read_write_statement  go to state 17
+-    assign_statement      go to state 18
+-    if_statement          go to state 19
+-    return_statement      go to state 20
+-    read_statement        go to state 21
+-    write_statement       go to state 22
+-    while_statement       go to state 23
+-    do_while_statement    go to state 24
+-    if_stmt               go to state 25
+-
+-
+-state 15
+-
+-   13 statements: statement .
+-
+-    $default  reduce using rule 13 (statements)
+-
+-
+-state 16
+-
+-   15 statement: control_statement .
+-
+-    $default  reduce using rule 15 (statement)
+-
+-
+-state 17
+-
+-   16 statement: read_write_statement . SEMI
+-
+-    SEMI  shift, and go to state 37
+-
+-
+-state 18
+-
+-   14 statement: assign_statement . SEMI
+-
+-    SEMI  shift, and go to state 38
+-
+-
+-state 19
+-
+-   18 control_statement: if_statement .
+-
+-    $default  reduce using rule 18 (control_statement)
+-
+-
+-state 20
+-
+-   21 control_statement: return_statement . SEMI
+-
+-    SEMI  shift, and go to state 39
+-
+-
+-state 21
+-
+-   22 read_write_statement: read_statement .
+-
+-    $default  reduce using rule 22 (read_write_statement)
+-
+-
+-state 22
+-
+-   23 read_write_statement: write_statement .
+-
+-    $default  reduce using rule 23 (read_write_statement)
+-
+-
+-state 23
+-
+-   20 control_statement: while_statement .
+-
+-    $default  reduce using rule 20 (control_statement)
+-
+-
+-state 24
+-
+-   19 control_statement: do_while_statement . SEMI
+-
+-    SEMI  shift, and go to state 40
+-
+-
+-state 25
+-
+-   26 if_statement: if_stmt .
+-   28             | if_stmt . ELSE @1 code_block
+-
+-    ELSE  shift, and go to state 41
+-
+-    ELSE      [reduce using rule 26 (if_statement)]
+-    $default  reduce using rule 26 (if_statement)
+-
+-
+-state 26
+-
+-   30 read_statement: READ LPAR . IDENTIFIER RPAR
+-
+-    IDENTIFIER  shift, and go to state 42
+-
+-
+-state 27
+-
+-   31 write_statement: WRITE LPAR . exp RPAR
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 48
+-
+-
+-state 28
+-
+-   36 do_while_statement: DO @4 . code_block WHILE LPAR exp RPAR
+-
+-    LBRACE      shift, and go to state 49
+-    SEMI        shift, and go to state 4
+-    RETURN      shift, and go to state 5
+-    READ        shift, and go to state 6
+-    WRITE       shift, and go to state 7
+-    DO          shift, and go to state 8
+-    WHILE       shift, and go to state 9
+-    IF          shift, and go to state 10
+-    IDENTIFIER  shift, and go to state 12
+-
+-    code_block            go to state 50
+-    statement             go to state 51
+-    control_statement     go to state 16
+-    read_write_statement  go to state 17
+-    assign_statement      go to state 18
+-    if_statement          go to state 19
+-    return_statement      go to state 20
+-    read_statement        go to state 21
+-    write_statement       go to state 22
+-    while_statement       go to state 23
+-    do_while_statement    go to state 24
+-    if_stmt               go to state 25
+-
+-
+-state 29
+-
+-   34 while_statement: WHILE @2 . LPAR exp RPAR @3 code_block
+-
+-    LPAR  shift, and go to state 52
+-
+-
+-state 30
+-
+-   39 if_stmt: IF @5 . LPAR exp RPAR @6 code_block
+-
+-    LPAR  shift, and go to state 53
+-
+-
+-state 31
+-
+-    7 declaration: IDENTIFIER . ASSIGN NUMBER
+-    8            | IDENTIFIER . LSQUARE NUMBER RSQUARE
+-    9            | IDENTIFIER .
+-
+-    LSQUARE  shift, and go to state 54
+-    ASSIGN   shift, and go to state 55
+-
+-    $default  reduce using rule 9 (declaration)
+-
+-
+-state 32
+-
+-    4 var_declaration: TYPE declaration_list . SEMI
+-    5 declaration_list: declaration_list . COMMA declaration
+-
+-    SEMI   shift, and go to state 56
+-    COMMA  shift, and go to state 57
+-
+-
+-state 33
+-
+-    6 declaration_list: declaration .
+-
+-    $default  reduce using rule 6 (declaration_list)
+-
+-
+-state 34
+-
+-   24 assign_statement: IDENTIFIER LSQUARE . exp RSQUARE ASSIGN exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 58
+-
+-
+-state 35
+-
+-   25 assign_statement: IDENTIFIER ASSIGN . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 59
+-
+-
+-state 36
+-
+-   12 statements: statements statement .
+-
+-    $default  reduce using rule 12 (statements)
+-
+-
+-state 37
+-
+-   16 statement: read_write_statement SEMI .
+-
+-    $default  reduce using rule 16 (statement)
+-
+-
+-state 38
+-
+-   14 statement: assign_statement SEMI .
+-
+-    $default  reduce using rule 14 (statement)
+-
+-
+-state 39
+-
+-   21 control_statement: return_statement SEMI .
+-
+-    $default  reduce using rule 21 (control_statement)
+-
+-
+-state 40
+-
+-   19 control_statement: do_while_statement SEMI .
+-
+-    $default  reduce using rule 19 (control_statement)
+-
+-
+-state 41
+-
+-   28 if_statement: if_stmt ELSE . @1 code_block
+-
+-    $default  reduce using rule 27 (@1)
+-
+-    @1  go to state 60
+-
+-
+-state 42
+-
+-   30 read_statement: READ LPAR IDENTIFIER . RPAR
+-
+-    RPAR  shift, and go to state 61
+-
+-
+-state 43
+-
+-   61 exp: LPAR . exp RPAR
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 62
+-
+-
+-state 44
+-
+-   62 exp: MINUS . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 63
+-
+-
+-state 45
+-
+-   43 exp: NOT_OP . NUMBER
+-   44    | NOT_OP . IDENTIFIER
+-
+-    IDENTIFIER  shift, and go to state 64
+-    NUMBER      shift, and go to state 65
+-
+-
+-state 46
+-
+-   41 exp: IDENTIFIER .
+-   42    | IDENTIFIER . LSQUARE exp RSQUARE
+-
+-    LSQUARE  shift, and go to state 66
+-
+-    $default  reduce using rule 41 (exp)
+-
+-
+-state 47
+-
+-   40 exp: NUMBER .
+-
+-    $default  reduce using rule 40 (exp)
+-
+-
+-state 48
+-
+-   31 write_statement: WRITE LPAR exp . RPAR
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    RPAR    shift, and go to state 67
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    AND_OP  shift, and go to state 72
+-    OR_OP   shift, and go to state 73
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-    ANDAND  shift, and go to state 82
+-    OROR    shift, and go to state 83
+-
+-
+-state 49
+-
+-   11 code_block: LBRACE . statements RBRACE
+-
+-    SEMI        shift, and go to state 4
+-    RETURN      shift, and go to state 5
+-    READ        shift, and go to state 6
+-    WRITE       shift, and go to state 7
+-    DO          shift, and go to state 8
+-    WHILE       shift, and go to state 9
+-    IF          shift, and go to state 10
+-    IDENTIFIER  shift, and go to state 12
+-
+-    statements            go to state 84
+-    statement             go to state 15
+-    control_statement     go to state 16
+-    read_write_statement  go to state 17
+-    assign_statement      go to state 18
+-    if_statement          go to state 19
+-    return_statement      go to state 20
+-    read_statement        go to state 21
+-    write_statement       go to state 22
+-    while_statement       go to state 23
+-    do_while_statement    go to state 24
+-    if_stmt               go to state 25
+-
+-
+-state 50
+-
+-   36 do_while_statement: DO @4 code_block . WHILE LPAR exp RPAR
+-
+-    WHILE  shift, and go to state 85
+-
+-
+-state 51
+-
+-   10 code_block: statement .
+-
+-    $default  reduce using rule 10 (code_block)
+-
+-
+-state 52
+-
+-   34 while_statement: WHILE @2 LPAR . exp RPAR @3 code_block
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 86
+-
+-
+-state 53
+-
+-   39 if_stmt: IF @5 LPAR . exp RPAR @6 code_block
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 87
+-
+-
+-state 54
+-
+-    8 declaration: IDENTIFIER LSQUARE . NUMBER RSQUARE
+-
+-    NUMBER  shift, and go to state 88
+-
+-
+-state 55
+-
+-    7 declaration: IDENTIFIER ASSIGN . NUMBER
+-
+-    NUMBER  shift, and go to state 89
+-
+-
+-state 56
+-
+-    4 var_declaration: TYPE declaration_list SEMI .
+-
+-    $default  reduce using rule 4 (var_declaration)
+-
+-
+-state 57
+-
+-    5 declaration_list: declaration_list COMMA . declaration
+-
+-    IDENTIFIER  shift, and go to state 31
+-
+-    declaration  go to state 90
+-
+-
+-state 58
+-
+-   24 assign_statement: IDENTIFIER LSQUARE exp . RSQUARE ASSIGN exp
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    RSQUARE  shift, and go to state 91
+-    PLUS     shift, and go to state 68
+-    MINUS    shift, and go to state 69
+-    MUL_OP   shift, and go to state 70
+-    DIV_OP   shift, and go to state 71
+-    AND_OP   shift, and go to state 72
+-    OR_OP    shift, and go to state 73
+-    LT       shift, and go to state 74
+-    GT       shift, and go to state 75
+-    SHL_OP   shift, and go to state 76
+-    SHR_OP   shift, and go to state 77
+-    EQ       shift, and go to state 78
+-    NOTEQ    shift, and go to state 79
+-    LTEQ     shift, and go to state 80
+-    GTEQ     shift, and go to state 81
+-    ANDAND   shift, and go to state 82
+-    OROR     shift, and go to state 83
+-
+-
+-state 59
+-
+-   25 assign_statement: IDENTIFIER ASSIGN exp .
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    AND_OP  shift, and go to state 72
+-    OR_OP   shift, and go to state 73
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-    ANDAND  shift, and go to state 82
+-    OROR    shift, and go to state 83
+-
+-    $default  reduce using rule 25 (assign_statement)
+-
+-
+-state 60
+-
+-   28 if_statement: if_stmt ELSE @1 . code_block
+-
+-    LBRACE      shift, and go to state 49
+-    SEMI        shift, and go to state 4
+-    RETURN      shift, and go to state 5
+-    READ        shift, and go to state 6
+-    WRITE       shift, and go to state 7
+-    DO          shift, and go to state 8
+-    WHILE       shift, and go to state 9
+-    IF          shift, and go to state 10
+-    IDENTIFIER  shift, and go to state 12
+-
+-    code_block            go to state 92
+-    statement             go to state 51
+-    control_statement     go to state 16
+-    read_write_statement  go to state 17
+-    assign_statement      go to state 18
+-    if_statement          go to state 19
+-    return_statement      go to state 20
+-    read_statement        go to state 21
+-    write_statement       go to state 22
+-    while_statement       go to state 23
+-    do_while_statement    go to state 24
+-    if_stmt               go to state 25
+-
+-
+-state 61
+-
+-   30 read_statement: READ LPAR IDENTIFIER RPAR .
+-
+-    $default  reduce using rule 30 (read_statement)
+-
+-
+-state 62
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-   61    | LPAR exp . RPAR
+-
+-    RPAR    shift, and go to state 93
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    AND_OP  shift, and go to state 72
+-    OR_OP   shift, and go to state 73
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-    ANDAND  shift, and go to state 82
+-    OROR    shift, and go to state 83
+-
+-
+-state 63
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-   62    | MINUS exp .
+-
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-
+-    $default  reduce using rule 62 (exp)
+-
+-
+-state 64
+-
+-   44 exp: NOT_OP IDENTIFIER .
+-
+-    $default  reduce using rule 44 (exp)
+-
+-
+-state 65
+-
+-   43 exp: NOT_OP NUMBER .
+-
+-    $default  reduce using rule 43 (exp)
+-
+-
+-state 66
+-
+-   42 exp: IDENTIFIER LSQUARE . exp RSQUARE
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 94
+-
+-
+-state 67
+-
+-   31 write_statement: WRITE LPAR exp RPAR .
+-
+-    $default  reduce using rule 31 (write_statement)
+-
+-
+-state 68
+-
+-   47 exp: exp PLUS . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 95
+-
+-
+-state 69
+-
+-   48 exp: exp MINUS . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 96
+-
+-
+-state 70
+-
+-   49 exp: exp MUL_OP . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 97
+-
+-
+-state 71
+-
+-   50 exp: exp DIV_OP . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 98
+-
+-
+-state 72
+-
+-   45 exp: exp AND_OP . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 99
+-
+-
+-state 73
+-
+-   46 exp: exp OR_OP . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 100
+-
+-
+-state 74
+-
+-   51 exp: exp LT . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 101
+-
+-
+-state 75
+-
+-   52 exp: exp GT . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 102
+-
+-
+-state 76
+-
+-   57 exp: exp SHL_OP . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 103
+-
+-
+-state 77
+-
+-   58 exp: exp SHR_OP . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 104
+-
+-
+-state 78
+-
+-   53 exp: exp EQ . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 105
+-
+-
+-state 79
+-
+-   54 exp: exp NOTEQ . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 106
+-
+-
+-state 80
+-
+-   55 exp: exp LTEQ . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 107
+-
+-
+-state 81
+-
+-   56 exp: exp GTEQ . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 108
+-
+-
+-state 82
+-
+-   59 exp: exp ANDAND . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 109
+-
+-
+-state 83
+-
+-   60 exp: exp OROR . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 110
+-
+-
+-state 84
+-
+-   11 code_block: LBRACE statements . RBRACE
+-   12 statements: statements . statement
+-
+-    RBRACE      shift, and go to state 111
+-    SEMI        shift, and go to state 4
+-    RETURN      shift, and go to state 5
+-    READ        shift, and go to state 6
+-    WRITE       shift, and go to state 7
+-    DO          shift, and go to state 8
+-    WHILE       shift, and go to state 9
+-    IF          shift, and go to state 10
+-    IDENTIFIER  shift, and go to state 12
+-
+-    statement             go to state 36
+-    control_statement     go to state 16
+-    read_write_statement  go to state 17
+-    assign_statement      go to state 18
+-    if_statement          go to state 19
+-    return_statement      go to state 20
+-    read_statement        go to state 21
+-    write_statement       go to state 22
+-    while_statement       go to state 23
+-    do_while_statement    go to state 24
+-    if_stmt               go to state 25
+-
+-
+-state 85
+-
+-   36 do_while_statement: DO @4 code_block WHILE . LPAR exp RPAR
+-
+-    LPAR  shift, and go to state 112
+-
+-
+-state 86
+-
+-   34 while_statement: WHILE @2 LPAR exp . RPAR @3 code_block
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    RPAR    shift, and go to state 113
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    AND_OP  shift, and go to state 72
+-    OR_OP   shift, and go to state 73
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-    ANDAND  shift, and go to state 82
+-    OROR    shift, and go to state 83
+-
+-
+-state 87
+-
+-   39 if_stmt: IF @5 LPAR exp . RPAR @6 code_block
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    RPAR    shift, and go to state 114
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    AND_OP  shift, and go to state 72
+-    OR_OP   shift, and go to state 73
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-    ANDAND  shift, and go to state 82
+-    OROR    shift, and go to state 83
+-
+-
+-state 88
+-
+-    8 declaration: IDENTIFIER LSQUARE NUMBER . RSQUARE
+-
+-    RSQUARE  shift, and go to state 115
+-
+-
+-state 89
+-
+-    7 declaration: IDENTIFIER ASSIGN NUMBER .
+-
+-    $default  reduce using rule 7 (declaration)
+-
+-
+-state 90
+-
+-    5 declaration_list: declaration_list COMMA declaration .
+-
+-    $default  reduce using rule 5 (declaration_list)
+-
+-
+-state 91
+-
+-   24 assign_statement: IDENTIFIER LSQUARE exp RSQUARE . ASSIGN exp
+-
+-    ASSIGN  shift, and go to state 116
+-
+-
+-state 92
+-
+-   28 if_statement: if_stmt ELSE @1 code_block .
+-
+-    $default  reduce using rule 28 (if_statement)
+-
+-
+-state 93
+-
+-   61 exp: LPAR exp RPAR .
+-
+-    $default  reduce using rule 61 (exp)
+-
+-
+-state 94
+-
+-   42 exp: IDENTIFIER LSQUARE exp . RSQUARE
+-   45    | exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    RSQUARE  shift, and go to state 117
+-    PLUS     shift, and go to state 68
+-    MINUS    shift, and go to state 69
+-    MUL_OP   shift, and go to state 70
+-    DIV_OP   shift, and go to state 71
+-    AND_OP   shift, and go to state 72
+-    OR_OP    shift, and go to state 73
+-    LT       shift, and go to state 74
+-    GT       shift, and go to state 75
+-    SHL_OP   shift, and go to state 76
+-    SHR_OP   shift, and go to state 77
+-    EQ       shift, and go to state 78
+-    NOTEQ    shift, and go to state 79
+-    LTEQ     shift, and go to state 80
+-    GTEQ     shift, and go to state 81
+-    ANDAND   shift, and go to state 82
+-    OROR     shift, and go to state 83
+-
+-
+-state 95
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   47    | exp PLUS exp .
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-
+-    $default  reduce using rule 47 (exp)
+-
+-
+-state 96
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   48    | exp MINUS exp .
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-
+-    $default  reduce using rule 48 (exp)
+-
+-
+-state 97
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   49    | exp MUL_OP exp .
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    $default  reduce using rule 49 (exp)
+-
+-
+-state 98
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   50    | exp DIV_OP exp .
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    $default  reduce using rule 50 (exp)
+-
+-
+-state 99
+-
+-   45 exp: exp . AND_OP exp
+-   45    | exp AND_OP exp .
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-
+-    $default  reduce using rule 45 (exp)
+-
+-
+-state 100
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   46    | exp OR_OP exp .
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    AND_OP  shift, and go to state 72
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-
+-    $default  reduce using rule 46 (exp)
+-
+-
+-state 101
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   51    | exp LT exp .
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-
+-    $default  reduce using rule 51 (exp)
+-
+-
+-state 102
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   52    | exp GT exp .
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-
+-    $default  reduce using rule 52 (exp)
+-
+-
+-state 103
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   57    | exp SHL_OP exp .
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-
+-    $default  reduce using rule 57 (exp)
+-
+-
+-state 104
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   58    | exp SHR_OP exp .
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-
+-    $default  reduce using rule 58 (exp)
+-
+-
+-state 105
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   53    | exp EQ exp .
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-
+-    $default  reduce using rule 53 (exp)
+-
+-
+-state 106
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   54    | exp NOTEQ exp .
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-
+-    $default  reduce using rule 54 (exp)
+-
+-
+-state 107
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   55    | exp LTEQ exp .
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-
+-    $default  reduce using rule 55 (exp)
+-
+-
+-state 108
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   56    | exp GTEQ exp .
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-
+-    $default  reduce using rule 56 (exp)
+-
+-
+-state 109
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   59    | exp ANDAND exp .
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    AND_OP  shift, and go to state 72
+-    OR_OP   shift, and go to state 73
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-
+-    $default  reduce using rule 59 (exp)
+-
+-
+-state 110
+-
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-   60    | exp OROR exp .
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    AND_OP  shift, and go to state 72
+-    OR_OP   shift, and go to state 73
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-    ANDAND  shift, and go to state 82
+-
+-    $default  reduce using rule 60 (exp)
+-
+-
+-state 111
+-
+-   11 code_block: LBRACE statements RBRACE .
+-
+-    $default  reduce using rule 11 (code_block)
+-
+-
+-state 112
+-
+-   36 do_while_statement: DO @4 code_block WHILE LPAR . exp RPAR
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 118
+-
+-
+-state 113
+-
+-   34 while_statement: WHILE @2 LPAR exp RPAR . @3 code_block
+-
+-    $default  reduce using rule 33 (@3)
+-
+-    @3  go to state 119
+-
+-
+-state 114
+-
+-   39 if_stmt: IF @5 LPAR exp RPAR . @6 code_block
+-
+-    $default  reduce using rule 38 (@6)
+-
+-    @6  go to state 120
+-
+-
+-state 115
+-
+-    8 declaration: IDENTIFIER LSQUARE NUMBER RSQUARE .
+-
+-    $default  reduce using rule 8 (declaration)
+-
+-
+-state 116
+-
+-   24 assign_statement: IDENTIFIER LSQUARE exp RSQUARE ASSIGN . exp
+-
+-    LPAR        shift, and go to state 43
+-    MINUS       shift, and go to state 44
+-    NOT_OP      shift, and go to state 45
+-    IDENTIFIER  shift, and go to state 46
+-    NUMBER      shift, and go to state 47
+-
+-    exp  go to state 121
+-
+-
+-state 117
+-
+-   42 exp: IDENTIFIER LSQUARE exp RSQUARE .
+-
+-    $default  reduce using rule 42 (exp)
+-
+-
+-state 118
+-
+-   36 do_while_statement: DO @4 code_block WHILE LPAR exp . RPAR
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    RPAR    shift, and go to state 122
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    AND_OP  shift, and go to state 72
+-    OR_OP   shift, and go to state 73
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-    ANDAND  shift, and go to state 82
+-    OROR    shift, and go to state 83
+-
+-
+-state 119
+-
+-   34 while_statement: WHILE @2 LPAR exp RPAR @3 . code_block
+-
+-    LBRACE      shift, and go to state 49
+-    SEMI        shift, and go to state 4
+-    RETURN      shift, and go to state 5
+-    READ        shift, and go to state 6
+-    WRITE       shift, and go to state 7
+-    DO          shift, and go to state 8
+-    WHILE       shift, and go to state 9
+-    IF          shift, and go to state 10
+-    IDENTIFIER  shift, and go to state 12
+-
+-    code_block            go to state 123
+-    statement             go to state 51
+-    control_statement     go to state 16
+-    read_write_statement  go to state 17
+-    assign_statement      go to state 18
+-    if_statement          go to state 19
+-    return_statement      go to state 20
+-    read_statement        go to state 21
+-    write_statement       go to state 22
+-    while_statement       go to state 23
+-    do_while_statement    go to state 24
+-    if_stmt               go to state 25
+-
+-
+-state 120
+-
+-   39 if_stmt: IF @5 LPAR exp RPAR @6 . code_block
+-
+-    LBRACE      shift, and go to state 49
+-    SEMI        shift, and go to state 4
+-    RETURN      shift, and go to state 5
+-    READ        shift, and go to state 6
+-    WRITE       shift, and go to state 7
+-    DO          shift, and go to state 8
+-    WHILE       shift, and go to state 9
+-    IF          shift, and go to state 10
+-    IDENTIFIER  shift, and go to state 12
+-
+-    code_block            go to state 124
+-    statement             go to state 51
+-    control_statement     go to state 16
+-    read_write_statement  go to state 17
+-    assign_statement      go to state 18
+-    if_statement          go to state 19
+-    return_statement      go to state 20
+-    read_statement        go to state 21
+-    write_statement       go to state 22
+-    while_statement       go to state 23
+-    do_while_statement    go to state 24
+-    if_stmt               go to state 25
+-
+-
+-state 121
+-
+-   24 assign_statement: IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp .
+-   45 exp: exp . AND_OP exp
+-   46    | exp . OR_OP exp
+-   47    | exp . PLUS exp
+-   48    | exp . MINUS exp
+-   49    | exp . MUL_OP exp
+-   50    | exp . DIV_OP exp
+-   51    | exp . LT exp
+-   52    | exp . GT exp
+-   53    | exp . EQ exp
+-   54    | exp . NOTEQ exp
+-   55    | exp . LTEQ exp
+-   56    | exp . GTEQ exp
+-   57    | exp . SHL_OP exp
+-   58    | exp . SHR_OP exp
+-   59    | exp . ANDAND exp
+-   60    | exp . OROR exp
+-
+-    PLUS    shift, and go to state 68
+-    MINUS   shift, and go to state 69
+-    MUL_OP  shift, and go to state 70
+-    DIV_OP  shift, and go to state 71
+-    AND_OP  shift, and go to state 72
+-    OR_OP   shift, and go to state 73
+-    LT      shift, and go to state 74
+-    GT      shift, and go to state 75
+-    SHL_OP  shift, and go to state 76
+-    SHR_OP  shift, and go to state 77
+-    EQ      shift, and go to state 78
+-    NOTEQ   shift, and go to state 79
+-    LTEQ    shift, and go to state 80
+-    GTEQ    shift, and go to state 81
+-    ANDAND  shift, and go to state 82
+-    OROR    shift, and go to state 83
+-
+-    $default  reduce using rule 24 (assign_statement)
+-
+-
+-state 122
+-
+-   36 do_while_statement: DO @4 code_block WHILE LPAR exp RPAR .
+-
+-    $default  reduce using rule 36 (do_while_statement)
+-
+-
+-state 123
+-
+-   34 while_statement: WHILE @2 LPAR exp RPAR @3 code_block .
+-
+-    $default  reduce using rule 34 (while_statement)
+-
+-
+-state 124
+-
+-   39 if_stmt: IF @5 LPAR exp RPAR @6 code_block .
+-
+-    $default  reduce using rule 39 (if_stmt)
+diff --git a/acse/Acse.y b/acse/Acse.y
+index ec9ef8b..713c2ab 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -114,9 +114,10 @@ extern int yyerror(const char* errmsg);
+ =========================================================================*/
+ %start program
+ 
++%token NOT_OP
+ %token LBRACE RBRACE LPAR RPAR LSQUARE RSQUARE
+ %token SEMI COLON PLUS MINUS MUL_OP DIV_OP MOD_OP
+-%token AND_OP OR_OP NOT_OP
++%token AND_OP OR_OP
+ %token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ
+ %token ANDAND OROR
+ %token COMMA
+@@ -153,6 +154,7 @@ extern int yyerror(const char* errmsg);
+ %left SHL_OP SHR_OP
+ %left MINUS PLUS
+ %left MUL_OP DIV_OP
++%left NOT_OP
+ %right NOT
+ 
+ /*=========================================================================
+@@ -457,7 +459,32 @@ write_statement : WRITE LPAR exp RPAR
+             }
+ ;
+ 
+-exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
++exp: 
++   exp NOT_OP
++   {
++      if ($1.expression_type == IMMEDIATE) {
++        int result = 1;
++        for(int i = $1.value; i > 1; i--) {
++          result *= i;
++        }
++        $$ = create_expression(result, IMMEDIATE);
++      } else {
++        int i = getNewRegister(program);
++        int result = gen_load_immediate(program, 1);
++        gen_addi_instruction(program, i, $1.value, 0);
++        t_axe_label *loop = assignNewLabel(program);
++        int temp = getNewRegister(program);
++        gen_subi_instruction(program, temp, i, 1);
++        t_axe_label *out = newLabel(program);
++        gen_ble_instruction(program, out, 0);
++        gen_mul_instruction(program, result, result, i, CG_DIRECT_ALL);
++        gen_subi_instruction(program, i, i, 1);
++        gen_bgt_instruction(program, loop, 0);
++        assignLabel(program, out);
++        $$ = create_expression(result, REGISTER);
++      }
++   }
++   | NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    | IDENTIFIER  {
+                      int location;
+    
+@@ -484,33 +511,6 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                      /* free the memory associated with the IDENTIFIER */
+                      free($1);
+    }
+-   | NOT_OP NUMBER   {  if ($2 == 0)
+-                           $$ = create_expression (1, IMMEDIATE);
+-                        else
+-                           $$ = create_expression (0, IMMEDIATE);
+-   }
+-   | NOT_OP IDENTIFIER  {
+-                           int identifier_location;
+-                           int output_register;
+-   
+-                           /* get the location of the symbol with the given ID */
+-                           identifier_location =
+-                                 get_symbol_location(program, $2, 0);
+-
+-                           /* generate a NOT instruction. In order to do this,
+-                            * at first we have to ask for a free register where
+-                            * to store the result of the NOT instruction. */
+-                           output_register = getNewRegister(program);
+-
+-                           /* Now we are able to generate a NOT instruction */
+-                           gen_notl_instruction (program, output_register
+-                                 , identifier_location);
+-
+-                           $$ = create_expression (output_register, REGISTER);
+-
+-                           /* free the memory associated with the IDENTIFIER */
+-                           free($2);
+-   }
+    | exp AND_OP exp     {
+                            $$ = handle_bin_numeric_op(program, $1, $3, ANDB);
+    }
+diff --git a/tests/fact/fact.src b/tests/fact/fact.src
+index 9213560..d9614eb 100644
+--- a/tests/fact/fact.src
++++ b/tests/fact/fact.src
+@@ -4,12 +4,13 @@ read(value);
+ 
+ if (value < 0)
+ {
+-	write(-1);
+ 	return;
+ }
+ 
+ fact = 1;
+ 
++write(value!);
++
+ while(value > 0)
+ {
+ 	fact = value * fact;

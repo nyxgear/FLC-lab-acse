@@ -1,0 +1,126 @@
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..2814bd4 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -276,6 +276,68 @@ assign_statement : IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
+                 * by a call to the function `strdup' (see Acse.lex) */
+                free($1);
+             }
++            | IDENTIFIER ASSIGN IDENTIFIER LSQUARE NUMBER COLON NUMBER RSQUARE
++            {
++               t_axe_variable *dest = getVariable(program, $1);
++               t_axe_variable *src = getVariable(program, $3);
++               if(!dest->isArray || !src->isArray) notifyError(AXE_INVALID_VARIABLE);
++               /* Condition on range .. */
++               /* Create a copy of source if needed */
++               char *src_copy_id = (char *) malloc((strlen($3) + 4) * sizeof(char));
++               strcpy(src_copy_id, $3);
++               strcat(src_copy_id, "axe");
++               if (!strcmp($1, $3) && !getVariable(program, src_copy_id)) {
++                 t_axe_declaration *d = alloc_declaration(src_copy_id, 1, src->arraySize, 0);
++                 set_new_variables(program, INTEGER_TYPE, addElement(NULL, d, 0));
++                 /* for (i = 0; i < size; i++) copy[i] = src[i] */
++                 int i = gen_load_immediate(program, 0);
++                 t_axe_expression i_e = create_expression(i, REGISTER);
++                 t_axe_label *c_loop = assignNewLabel(program);
++                 t_axe_label *c_end = newLabel(program);
++                 gen_subi_instruction(program, getNewRegister(program), i, src->arraySize);
++                 gen_bge_instruction(program, c_end, 0);
++                 int v = loadArrayElement(program, $3, i_e);
++                 storeArrayElement(program, src_copy_id, i_e, create_expression(v, REGISTER));
++                 gen_addi_instruction(program, i, i, 1);
++                 gen_bt_instruction(program, c_loop, 0);
++                 assignLabel(program, c_end);
++                 src = getVariable(program, src_copy_id);  /* Update reference of source to the new copy */
++               }
++               int i = gen_load_immediate(program, 0);
++               t_axe_expression i_e = create_expression(i, REGISTER);
++               int s = gen_load_immediate(program, $5);
++               t_axe_expression s_e = create_expression(s, REGISTER);
++               int e = gen_load_immediate(program, $7);
++               t_axe_expression e_e = create_expression(e, REGISTER);
++               if ($5 > $7) {
++                  gen_addi_instruction(program, e, s, 0);
++                  /* for (i = 0; s < size; i++, s++) dest[i] = src[s]*/
++                  t_axe_label *loop = assignNewLabel(program);
++                  t_axe_label *end = newLabel(program);
++                  gen_subi_instruction(program, getNewRegister(program), s, src->arraySize);
++                  gen_bge_instruction(program, end, 0);
++                  int v = loadArrayElement(program, src->ID, s_e);
++                  storeArrayElement(program, dest->ID, i_e, create_expression(v, REGISTER));
++                  gen_addi_instruction(program, i, i, 1);
++                  gen_addi_instruction(program, s, s, 1);
++                  gen_bt_instruction(program, loop, 0);
++                  assignLabel(program, end);
++                  gen_addi_instruction(program, s, REG_0, 0);
++               }
++               /* for (; s <= e; i++, s++) dest[i] = src[s] */
++               t_axe_label *loop = assignNewLabel(program);
++               t_axe_label *end = newLabel(program);
++               gen_sub_instruction(program, getNewRegister(program), s, e, CG_DIRECT_ALL);
++               gen_bgt_instruction(program, end, 0);
++               int v = loadArrayElement(program, src->ID, s_e);
++               storeArrayElement(program, dest->ID, i_e, create_expression(v, REGISTER));
++               gen_addi_instruction(program, i, i, 1);
++               gen_addi_instruction(program, s, s, 1);
++               gen_bt_instruction(program, loop, 0);
++               assignLabel(program, end);
++               free($1);
++               free($3);
++            }
+             | IDENTIFIER ASSIGN exp
+             {
+                int location;
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..61415e8 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc vectrange
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/vectrange/vectrange.src b/tests/vectrange/vectrange.src
+new file mode 100644
+index 0000000..ecbc414
+--- /dev/null
++++ b/tests/vectrange/vectrange.src
+@@ -0,0 +1,34 @@
++int a[10];
++
++int b[5];
++int i = 0;
++while (i < 10) {
++  a[i] = i; 
++  i = i + 1;
++}
++
++b = a[0:4];
++i = 0;
++while (i < 5) {
++  write(b[i]);
++  i = i+1;
++}
++b = a[9:2];
++i = 0;
++while (i < 5) {
++  write(b[i]);
++  i = i+1;
++}
++b = b[3:1];
++i = 0;
++while (i < 5) {
++  write(b[i]);
++  i = i+1;
++}
++b = a[6:6];
++i = 0;
++while (i < 5) {
++  write(b[i]);
++  i = i+1;
++}
++

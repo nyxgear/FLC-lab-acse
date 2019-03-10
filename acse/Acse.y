@@ -153,7 +153,7 @@ extern int yyerror(const char* errmsg);
 %left SHL_OP SHR_OP
 %left MINUS PLUS
 %left MUL_OP DIV_OP
-%right NOT
+%right NOT_OP
 
 /*=========================================================================
                          BISON GRAMMAR

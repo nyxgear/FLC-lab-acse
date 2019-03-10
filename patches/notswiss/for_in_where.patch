@@ -1,0 +1,138 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..9cd9ae1 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -91,6 +91,8 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "do"              { return DO; }
+ "else"            { return ELSE; }
+ "for"             { return FOR; }
++"in"              { return IN; }
++"where"           { return WHERE; }
+ "if"              { return IF; }
+ "int"             { yylval.intval = INTEGER_TYPE; return TYPE; }
+ "while"           { return WHILE; }
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..d9dae29 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -108,6 +108,7 @@ extern int yyerror(const char* errmsg);
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
++   t_for_in_where_statement for_in_where_stmt;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -120,11 +121,12 @@ extern int yyerror(const char* errmsg);
+ %token ASSIGN LT GT SHL_OP SHR_OP EQ NOTEQ LTEQ GTEQ
+ %token ANDAND OROR
+ %token COMMA
+-%token FOR
++%token IN WHERE
+ %token RETURN
+ %token READ
+ %token WRITE
+ 
++%token <for_in_where_stmt> FOR
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+@@ -252,6 +254,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
++            | for_in_where_statement     {}
+             | return_statement SEMI      { /* does nothing */ }
+ ;
+ 
+@@ -411,6 +414,36 @@ do_while_statement  : DO
+                      }
+ ;
+ 
++for_in_where_statement : FOR LPAR IDENTIFIER IN IDENTIFIER WHERE
++                       {
++                          $1 = (t_for_in_where_statement) {.i = gen_load_immediate(program, 0), .loop = newLabel(program), .code = newLabel(program), .end = newLabel(program) };
++                          t_axe_expression i = create_expression($1.i, REGISTER);
++                          int elem = get_symbol_location(program, $3, 0);
++                          t_axe_variable *arr = getVariable(program, $5);
++                          assignLabel(program, $1.loop);
++                          gen_subi_instruction(program, getNewRegister(program), $1.i, arr->arraySize);
++                          gen_bge_instruction(program, $1.end, 0);
++                          gen_addi_instruction(program, elem, loadArrayElement(program, $5, i), 0);
++                       } exp RPAR
++                       {
++                          if ($8.expression_type == IMMEDIATE) {
++                            if ($8.value) gen_bt_instruction(program, $1.code, 0);
++                            else          gen_bt_instruction(program, $1.end, 0);
++                          } else {
++                            gen_andb_instruction(program, $8.value, $8.value, $8.value, CG_DIRECT_ALL);
++                            gen_bne_instruction(program, $1.code, 0);
++                            gen_addi_instruction(program, $1.i, $1.i, 1);
++                            gen_bt_instruction(program, $1.loop, 0);
++                          }
++                          assignLabel(program, $1.code);
++                       } code_block
++                       {
++                          gen_addi_instruction(program, $1.i, $1.i, 1);
++                          gen_bt_instruction(program, $1.loop, 0);
++                          assignLabel(program, $1.end);
++                       }
++;
++
+ return_statement : RETURN
+             {
+                /* insert an HALT instruction */
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index 47663cc..09ed953 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,13 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_for_in_where_statement
++{
++   int i;
++   t_axe_label *loop;
++   t_axe_label *code;
++   t_axe_label *end;
++} t_for_in_where_statement;
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..13413f3 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc forwhere
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/forwhere/forwhere.src b/tests/forwhere/forwhere.src
+new file mode 100644
+index 0000000..7680558
+--- /dev/null
++++ b/tests/forwhere/forwhere.src
+@@ -0,0 +1,17 @@
++int elem, v[10];
++
++elem = 0;
++while (elem < 10) {v[elem] = elem; elem = elem + 1;}
++for (elem in v where (elem & 29) != 0) {
++write(elem);
++write(elem + 29);
++
++}
++
++for (elem in v where 1) {
++write(elem);
++write(elem - 29);
++
++}
++
++for (elem in v where 0) {write(42);}

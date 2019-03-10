@@ -1,0 +1,108 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..1914632 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,8 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"cond"            { return COND; }
++"case"            { return CASE; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..696c719 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -93,6 +93,8 @@ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
++t_list *cond_statements;
++
+ %}
+ %expect 1
+ 
+@@ -124,6 +126,8 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
++%token <label> COND 
++%token <label> CASE
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -253,6 +257,40 @@ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
+             | return_statement SEMI      { /* does nothing */ }
++            | cond_statement
++;
++
++cond_statement : COND LBRACE 
++               {
++                  $1 = newLabel(program);
++                  cond_statements = addFirst(cond_statements, $1);
++               }
++               case_statements RBRACE
++               {
++                  cond_statements = removeFirst(cond_statements);
++                  assignLabel(program, $1);
++               }               
++;
++
++case_statements : case_statements case_statement 
++                | case_statement
++;
++
++case_statement : CASE exp COLON 
++               {
++                  $1 = newLabel(program);
++                  if ($2.expression_type == IMMEDIATE)
++                    gen_load_immediate(program, $2.value);
++                  else
++                    gen_andb_instruction(program, $2.value, $2.value, $2.value, CG_DIRECT_ALL);
++                  gen_beq_instruction(program, $1, 0);  /* Goes to next case if not true */
++               }
++               statements
++               {
++                  t_axe_label *end = (t_axe_label *) getElementAt(cond_statements, 0)->data;
++                  gen_bt_instruction(program, end, 0);  /* Only one case gets evaluated */
++                  assignLabel(program, $1);
++               }
+ ;
+ 
+ read_write_statement : read_statement  { /* does nothing */ }
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..ee6cb8b 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc cond
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/cond/cond.src b/tests/cond/cond.src
+new file mode 100644
+index 0000000..9332c8a
+--- /dev/null
++++ b/tests/cond/cond.src
+@@ -0,0 +1,13 @@
++int x = 0;
++int y = 1;
++
++cond {
++  case x: write(42);
++  case 0: write(0);
++  case x+y == 1: cond {
++                   case 1: write(1);
++                   case 0: write(0);
++                }
++  case 1:
++    write(42);
++}

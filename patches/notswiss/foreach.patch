@@ -1,0 +1,149 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..6898aca 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,9 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"foreach"         { return FOREACH; }
++"every"           { return EVERY; }
++"in"              { return IN;}
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..1159d95 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -108,6 +108,7 @@ extern int yyerror(const char* errmsg);
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
++   t_foreach_statement foreach_stmt;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -124,7 +125,8 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
+-
++%token IN EVERY
++%token <foreach_stmt> FOREACH
+ %token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+@@ -252,6 +254,7 @@ statement   : assign_statement SEMI      { /* does nothing */ }
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
++            | foreach_statement SEMI {}
+             | return_statement SEMI      { /* does nothing */ }
+ ;
+ 
+@@ -411,6 +414,47 @@ do_while_statement  : DO
+                      }
+ ;
+ 
++foreach_statement : FOREACH IDENTIFIER IN IDENTIFIER
++                  {
++                     t_axe_variable *e = getVariable(program, $2);
++                     t_axe_variable *arr = getVariable(program, $4);
++                     if(e->isArray || !arr->isArray) notifyError(AXE_INVALID_VARIABLE);
++                     $1 = (t_foreach_statement) {newLabel(program), newLabel(program), newLabel(program), newLabel(program), newLabel(program), gen_load_immediate(program, 0)};
++                     t_axe_expression i = create_expression($1.i, REGISTER);
++                     int temp = getNewRegister(program);
++                     gen_bt_instruction(program, $1.start, 0);
++                     assignLabel(program, $1.loop);
++                     gen_subi_instruction(program, temp, $1.i, arr->arraySize);
++                     gen_bge_instruction(program, $1.end, 0);
++                     int location = get_symbol_location(program, $2, 0);
++                     temp = loadArrayElement(program, $4, i);
++                     gen_addi_instruction(program, location, temp, 0);
++                     gen_bt_instruction(program, $1.every, 0);
++                     assignLabel(program, $1.block);
++                  } code_block
++                  {
++                     gen_addi_instruction(program, $1.i, $1.i, 1);
++                     gen_bt_instruction(program, $1.loop, 0);
++                  } EVERY exp 
++                  {
++                     t_axe_variable *arr = getVariable(program, $4);
++                     if ($9.expression_type != IMMEDIATE || $9.value <= 1 || $9.value > arr->arraySize) notifyError(AXE_INVALID_EXPRESSION);
++                     assignLabel(program, $1.start);
++                     int j = gen_load_immediate(program, $9.value - 1);
++                     gen_bt_instruction(program, $1.loop, 0);
++                     assignLabel(program, $1.every);
++                     int temp = getNewRegister(program);
++                     gen_sub_instruction(program, temp, j, $1.i, CG_DIRECT_ALL);
++                     gen_bne_instruction(program, $1.block, 0);
++                     gen_addi_instruction(program, j, j, $9.value);
++                  } DO code_block
++                  {
++                     gen_addi_instruction(program, $1.i, $1.i, 1);
++                     gen_bt_instruction(program, $1.loop, 0);
++                     assignLabel(program, $1.end);
++                  }
++;
++
+ return_statement : RETURN
+             {
+                /* insert an HALT instruction */
+diff --git a/acse/axe_struct.h b/acse/axe_struct.h
+index 47663cc..f0d9eb6 100644
+--- a/acse/axe_struct.h
++++ b/acse/axe_struct.h
+@@ -114,6 +114,15 @@ typedef struct t_while_statement
+                                     * that follows the while construct */
+ } t_while_statement;
+ 
++typedef struct t_foreach_statement
++{
++  t_axe_label *loop;
++  t_axe_label *end;
++  t_axe_label *every;
++  t_axe_label *block;
++  t_axe_label *start;
++  int i;
++} t_foreach_statement;
+ /* create a label */
+ extern t_axe_label * alloc_label(int value);
+ 
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..522a321 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc foreach
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/foreach/foreach.src b/tests/foreach/foreach.src
+new file mode 100644
+index 0000000..f37d500
+--- /dev/null
++++ b/tests/foreach/foreach.src
+@@ -0,0 +1,18 @@
++int elem, v[10], a;
++int i = 0;
++while(i < 10)
++{
++  v[i] = i;
++  i = i + 1;
++}
++a = 0;
++foreach elem in v {
++
++a = a + elem;
++
++} every 2 do {
++write(a);
++
++a = elem;
++
++};

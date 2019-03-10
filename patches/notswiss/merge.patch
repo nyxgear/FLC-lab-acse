@@ -1,0 +1,87 @@
+diff --git a/acse/Acse.lex b/acse/Acse.lex
+index 663b2db..e7262ea 100644
+--- a/acse/Acse.lex
++++ b/acse/Acse.lex
+@@ -97,6 +97,7 @@ ID       [a-zA-Z_][a-zA-Z0-9_]*
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"merge"           { return MERGE; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff --git a/acse/Acse.y b/acse/Acse.y
+index 57ff107..f09e785 100644
+--- a/acse/Acse.y
++++ b/acse/Acse.y
+@@ -124,6 +124,7 @@ extern int yyerror(const char* errmsg);
+ %token RETURN
+ %token READ
+ %token WRITE
++%token MERGE
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -141,9 +142,9 @@ extern int yyerror(const char* errmsg);
+ /*=========================================================================
+                           OPERATOR PRECEDENCES
+  =========================================================================*/
+-
+ %left COMMA
+ %left ASSIGN
++%right MERGE
+ %left OROR
+ %left ANDAND
+ %left OR_OP
+@@ -484,6 +485,22 @@ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+                      /* free the memory associated with the IDENTIFIER */
+                      free($1);
+    }
++   | MERGE exp COMMA exp COMMA exp
++   {
++      int mask = getNewRegister(program);
++      if ($6.expression_type == IMMEDIATE)
++        $$ = $6.value ? $2 : $4;
++      else {
++        t_axe_expression mask = create_expression(0, IMMEDIATE);
++        mask = handle_binary_comparison(program, $6, mask, _EQ_);
++        mask = handle_bin_numeric_op(program, mask, create_expression(1, IMMEDIATE), SUB);
++        int nmask = getNewRegister(program);
++        gen_notb_instruction(program, nmask, mask.value);
++        $$ = handle_bin_numeric_op(program, 
++          handle_bin_numeric_op(program, mask, $2, ANDB), 
++          handle_bin_numeric_op(program, create_expression(nmask, REGISTER), $4, ANDB), ORB);
++     }
++   }
+    | NOT_OP NUMBER   {  if ($2 == 0)
+                            $$ = create_expression (1, IMMEDIATE);
+                         else
+diff --git a/tests/Makefile b/tests/Makefile
+index ebbebd6..51776e4 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -1,7 +1,7 @@
+ asm=$(CURDIR)/../bin/asm
+ acse=$(CURDIR)/../bin/acse
+ export asm acse
+-dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc
++dirs:=arrays sum dowhile mult_table power semi assign arrays arrays2 misc merge
+ 
+ test :
+ 	for i in $(dirs); do $(MAKE) -C $$i -f ../Makefile.test ; done
+diff --git a/tests/merge/merge.src b/tests/merge/merge.src
+new file mode 100644
+index 0000000..e0cef57
+--- /dev/null
++++ b/tests/merge/merge.src
+@@ -0,0 +1,10 @@
++int a,b,c;
++a=7;
++b=2;
++
++c = merge a,b,a>b;
++write(c); /* this will print 7 */
++c = merge 2,3,0;
++write(c); /* this will print 3 */
++c = merge 1,0,merge 1, 0, 0;
++write(c);
